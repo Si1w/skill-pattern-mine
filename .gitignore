@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+
+# Environment
+.env
+.venv/
+uv.lock
+
+# HPC
+*.out
+*.log
+*.err
+
+# OS
+.DS_Store
+
+# Benchmark run results
+data/
+
+# Overleaf paper submodule checkout
+paper/
+
+# Repository
