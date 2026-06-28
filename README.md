@@ -8,7 +8,7 @@ Agent skills (reusable instruction sets for LLM-based agents) are rapidly evolvi
 
 **Key findings:**
 
-- We identify 10 modification families (e.g., *lifecycle*, *procedure*, *decision*, *policy*) covering 40%+ of observed modifications each for the top families.
+- We identify 46 adaptation patterns organized into 13 families (e.g., *lifecycle*, *procedure*, *decision*, *policy*) covering 40%+ of observed modifications each for the top families.
 - `modify-skill-metadata` is the single most common pattern (18.2% prevalence), followed by `add-procedure-step` (17.8%) and `add-decision-rule` (15.1%).
 - Security-relevant modifications appear in a non-trivial share of instances, spanning both hardening and relaxation changes.
 - Commit messages systematically under-describe the *why* behind skill adaptations.
