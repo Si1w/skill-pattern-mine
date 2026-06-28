@@ -1,19 +1,28 @@
 [project]
-name = "research-project"
+name = "skill-pattern-mine"
 version = "0.1.0"
-description = ""
+
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = "==3.12.*"
 license = { text = "MIT" }
-dependencies = []
 
-[tool.uv]
-dev-dependencies = []
+dependencies = [
+    "aiohttp",
+    "matplotlib",
+    "pydantic",
+    "pyyaml",
+    "tqdm",
+]
 
-[tool.uv.sources]
-torch = { index = "pytorch-cu128" }
+[dependency-groups]
+dev = ["pytest"]
 
-[[tool.uv.index]]
-name = "pytorch-cu128"
-url = "https://download.pytorch.org/whl/cu128"
-explicit = true
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# src/common.py holds cross-stage shared helpers (import common).
+# Add audit/analysis/eval as those stages are migrated.
+packages = ["src/mine", "src/label", "src/audit", "src/analysis"]
+force-include = { "src/common.py" = "common.py" }

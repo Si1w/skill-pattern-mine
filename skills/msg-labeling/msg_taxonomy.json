@@ -1,0 +1,51 @@
+{
+  "taxonomy_version": "v1.0",
+  "source": "commit_message_taxonomy",
+  "description": "Categories for how commit messages express What changed and Why a skill modification was made. Independent of the skill-modification (pattern) taxonomy. Ported from the legacy RQ5 commit-message codebook (configs/commit_message_patterns.yaml).",
+  "what_expression_categories": {
+    "coding_rule": "Assign every What expression category supported by the commit messages. Use missing-what only when no What information is present.",
+    "allowed": [
+      {
+        "label": "summarize-skill-object-change",
+        "definition": "Names the changed skill, skill file, resource, section, metadata field, script, or other skill artifact."
+      },
+      {
+        "label": "illustrate-skill-function",
+        "definition": "Describes the changed skill behavior, agent capability, workflow effect, or user-facing function."
+      },
+      {
+        "label": "describe-skill-implementation-principle",
+        "definition": "Explains the technical mechanism, execution principle, or implementation strategy used by the skill change."
+      },
+      {
+        "label": "missing-what",
+        "definition": "Does not provide enough information to determine what changed in the skill."
+      }
+    ]
+  },
+  "why_expression_categories": {
+    "coding_rule": "Assign every Why expression category supported by the commit messages. Use missing-why only when no Why information is present.",
+    "allowed": [
+      {
+        "label": "describe-skill-issue",
+        "definition": "States a bug, error, failure, limitation, inconsistency, or other problem in a skill or its supporting artifacts."
+      },
+      {
+        "label": "illustrate-skill-requirement",
+        "definition": "States an external requirement, upstream change, platform constraint, user need, or usage scenario that required the skill change."
+      },
+      {
+        "label": "describe-skill-objective",
+        "definition": "States the intended goal, benefit, improvement, or desired outcome of the skill change."
+      },
+      {
+        "label": "imply-skill-necessity",
+        "definition": "Implies the need for the skill change without explicitly stating an issue, requirement, or objective."
+      },
+      {
+        "label": "missing-why",
+        "definition": "Does not provide enough information to determine why the skill change was made."
+      }
+    ]
+  }
+}

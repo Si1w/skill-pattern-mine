@@ -1,0 +1,71 @@
+# Commit-message coding patterns for the representative audit set.
+# This codebook is used alongside the patch-derived skill modification labels.
+# Follow the work What Makes a Good Commit Message?
+# https://arxiv.org/pdf/2202.02974
+
+fields:
+  message_what_labels:
+    type: "multi_label"
+    source: "skill_modification_taxonomy"
+    level: "pattern"
+    required: true
+    description: "All skill-modification pattern labels that can be inferred from the commit messages alone."
+    coding_rule: "Assign every skill-modification pattern that the commit messages state or strongly imply. Do not use patch evidence to add labels that are absent from the messages."
+    missing_value: "missing-what"
+
+  message_what_families:
+    type: "multi_label"
+    source: "skill_modification_taxonomy"
+    level: "family"
+    required: true
+    description: "The taxonomy families corresponding to message_what_labels."
+    missing_value: "missing-what"
+
+  what_expression_categories:
+    type: "multi_label"
+    source: "commit_message_quality_taxonomy"
+    required: true
+    description: "All ways the commit messages express what changed in the skill modification."
+    allowed:
+      - label: "summarize-skill-object-change"
+        description: "Names the changed skill, skill file, resource, section, metadata field, script, or other skill artifact."
+      - label: "illustrate-skill-function"
+        description: "Describes the changed skill behavior, agent capability, workflow effect, or user-facing function."
+      - label: "describe-skill-implementation-principle"
+        description: "Explains the technical mechanism, execution principle, or implementation strategy used by the skill change."
+      - label: "missing-what"
+        description: "Does not provide enough information to determine what changed in the skill."
+    coding_rule: "Assign every What expression category supported by the commit messages. Use missing-what only when no What information is present."
+
+  why_expression_categories:
+    type: "multi_label"
+    source: "commit_message_quality_taxonomy"
+    required: true
+    description: "All ways the commit messages express why the skill modification was made."
+    allowed:
+      - label: "describe-skill-issue"
+        description: "States a bug, error, failure, limitation, inconsistency, or other problem in a skill or its supporting artifacts."
+      - label: "illustrate-skill-requirement"
+        description: "States an external requirement, upstream change, platform constraint, user need, or usage scenario that required the skill change."
+      - label: "describe-skill-objective"
+        description: "States the intended goal, benefit, improvement, or desired outcome of the skill change."
+      - label: "imply-skill-necessity"
+        description: "Implies the need for the skill change without explicitly stating an issue, requirement, or objective."
+      - label: "missing-why"
+        description: "Does not provide enough information to determine why the skill change was made."
+    coding_rule: "Assign every Why expression category supported by the commit messages. Use missing-why only when no Why information is present."
+
+  why_intentions:
+    type: "list_short_text"
+    required: true
+    description: "Concise free-text summaries of the message-stated intentions, or an empty list when why_expression_categories is only missing-why."
+    examples:
+      - "fix broken command invocation"
+      - "adapt the skill to a new client convention"
+      - "make the workflow easier to reuse"
+      - "support a new domain-specific task"
+
+  evidence:
+    type: "list_short_text"
+    required: true
+    description: "Short quotes or paraphrases from commit messages that support the What and Why coding."

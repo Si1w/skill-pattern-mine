@@ -1,5 +1,6 @@
 # Python
 __pycache__/
+.pytest_cache/
 
 # Environment
 .env
@@ -15,7 +16,13 @@ uv.lock
 .DS_Store
 
 # Benchmark run results
-data/
+data/analysis/
+data/audit/
+data/label/
+data/mine/
+data/msg/
+
+eval/tables-and-figures/
 
 # Overleaf paper submodule checkout
 paper/

@@ -1,0 +1,161 @@
+# Security-sensitive pattern rules for scanning skill-modification patches (RQ2c).
+# Each rule's patterns are Python regular expressions matched against the added
+# lines of a file patch. NET001 only flags requests to non-allowed domains.
+# Follow the work Agent Skills in the Wild: An Empirical Study of Security Vulnerabilities at Scale
+# https://arxiv.org/pdf/2601.10338
+
+network_rules:
+  - id: NET001
+    name: "External Network Requests"
+    severity: CRITICAL
+    patterns:
+      - "curl\\s+.*http"
+      - "wget\\s+"
+      - "requests\\.(post|get|put|delete)\\("
+      - "urllib\\.(request|parse)"
+      - "httpx\\."
+      - "fetch\\("
+    description: "A network request to send data outbound has been detected"
+    allowed_domains:
+      - "api.anthropic.com"
+      - "github.com"
+      - "pypi.org"
+      - "npmjs.com"
+
+  - id: NET002
+    name: "Data Leakage"
+    severity: CRITICAL
+    patterns:
+      - "curl.*-d.*@"
+      - "wget.*--post-data"
+      - "nc\\s+.*-l"
+      - "netcat.*-l"
+    description: "Potential data leakage detected"
+
+file_rules:
+  - id: FILE001
+    name: "Access to Sensitive Files"
+    severity: CRITICAL
+    patterns:
+      - "~?/\\.ssh/"
+      - "~?/\\.env"
+      - "~?/\\.aws/"
+      - "~?/\\.azure/"
+      - "~?/\\.credentials"
+      - "\\.pem"
+      - "\\.key"
+      - "id_rsa"
+      - "id_ed25519"
+      - "credentials\\.json"
+      - "secrets\\.(yaml|yml|json|env)"
+      - "password"
+      - "token"
+      - "api[_-]?key"
+    description: "Attempt to Access Sensitive Files"
+
+  - id: FILE002
+    name: "Dangerous File Operations"
+    severity: CRITICAL
+    patterns:
+      - "rm\\s+-rf\\s+/"
+      - "chmod\\s+777"
+      - "chmod\\s+a\\+rwx"
+      - "dd\\s+.*of=/"
+      - ">\\s+/(etc|usr|bin|sbin)/"
+    description: "Performing dangerous file operations"
+
+command_rules:
+  - id: CMD001
+    name: "Execution of Dangerous Commands"
+    severity: CRITICAL
+    patterns:
+      - "\\bsudo\\b"
+      - "\\bsu\\s"
+      - "rm\\s+-rf\\s+/"
+      - "chmod\\s+777"
+      - "\\bdd\\s+.*of=/"
+      - ":()>.*\\("
+    description: "Executing commands that could damage the system"
+
+  - id: CMD002
+    name: "System Command Invocation"
+    severity: WARNING
+    patterns:
+      - "\\bos\\.system\\s*\\("
+      - "subprocess\\.(call|run|Popen).*shell\\s*=\\s*True"
+      - "\\bexec\\s*\\("
+      - "popen\\s*\\("
+    description: "Function to execute system commands"
+
+injection_rules:
+  - id: INJ001
+    name: "Code Injection"
+    severity: CRITICAL
+    patterns:
+      - "inject.*into.*file"
+      - "prepend.*__import__"
+      - "inject.*code"
+      - "insert.*into.*file"
+    description: "Code injection pattern detected"
+
+  - id: INJ002
+    name: "Dynamic Code Execution"
+    severity: WARNING
+    patterns:
+      - "\\beval\\s*\\("
+      - "\\bexec\\s*\\("
+      - "__import__\\s*\\("
+      - "\\bcompile\\s*\\("
+    description: "Executing code snippets dynamically"
+
+  - id: INJ003
+    name: "Backdoor Implantation"
+    severity: CRITICAL
+    patterns:
+      - "bash\\s+-i\\s+>&\\s*/dev/tcp/"
+      - "nc\\s+-.*-e\\s+/"
+      - "netcat.*-e"
+      - "if.*PROD.*then.*(system|exec|eval|shell)"
+    description: "Backdoor implantation pattern detected"
+
+dependency_rules:
+  - id: DEP001
+    name: "Global Package Installation"
+    severity: WARNING
+    patterns:
+      - "pip\\s+install.*--global"
+      - "npm\\s+install.*-g"
+      - "npm\\s+i.*-g"
+      - "yarn\\s+global"
+      - "gem\\s+install"
+    description: "Global installation may affect other projects"
+
+  - id: DEP002
+    name: "Forced Version Overrides"
+    severity: WARNING
+    patterns:
+      - "install.*==.*force"
+      - "--upgrade"
+      - "--force-reinstall"
+      - "--ignore-installed"
+    description: "May disrupt the dependency environment"
+
+obfuscation_rules:
+  - id: OBF001
+    name: "Code Obfuscation"
+    severity: WARNING
+    patterns:
+      - "base64\\.decode"
+      - "base64\\.b64decode"
+      - "chr\\s*\\(.+\\)\\s*\\+\\s*chr"
+      - "exec\\s*\\(.*decode"
+    description: "Possible code obfuscation detected"
+
+  - id: OBF002
+    name: "Hidden Commands"
+    severity: WARNING
+    patterns:
+      - "__import__.*\\[.*\\]"
+      - "getattr\\s*\\(.*\\s*,\\s*['\"].*['\"]\\s*\\)\\s*\\("
+      - "vars\\(\\)\\[.*\\]"
+    description: "Calling a function indirectly"

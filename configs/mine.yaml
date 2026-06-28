@@ -1,0 +1,34 @@
+# Mining pipeline configuration.
+
+# Upstream skill repositories to mine.
+# Per-repo `prefix` overrides the default; "" means no path filter
+# (skills live at repo root).
+repos:
+  - repo: anthropics/skills
+  - repo: obra/superpowers
+  - repo: affaan-m/everything-claude-code
+  - repo: mattpocock/skills
+  - repo: vercel-labs/agent-skills
+  - repo: ComposioHQ/awesome-claude-skills
+    prefix: ""
+
+# Pipeline defaults. CLI flags override these.
+defaults:
+  prefix: skills/
+  sort: newest
+  concurrency: 4
+  # num_samples: 50   # uncomment for pilot runs
+
+# MSR search policy (mine.s01_search_repos): keyword + popularity gate.
+# Qualifying repos (default branch contains a SKILL.md) are added to the
+# repo list, deduped. Each keyword is searched separately; results are
+# merged and deduped by full_name.
+search:
+  keyword:
+    - skill
+    - '"agent skill"'   # quoted -> exact-phrase match (not AND of the two terms)
+  min_stars: 20000
+  min_forks: 2000
+  sort: stars
+  order: desc
+  require_skill_md: true   # keep only repos whose default branch has a SKILL.md

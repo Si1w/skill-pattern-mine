@@ -1,0 +1,360 @@
+{
+  "taxonomy_version": "v3.0",
+  "source": "bootstrap coding of data/label/sample/ (300 representative instances)",
+  "families": [
+    {
+      "name": "lifecycle",
+      "definition": "Manage a skill's existence and packaging by creating, deleting, renaming, translating, or restyling whole skills and their metadata, without changing core behavioral instructions.",
+      "patterns": [
+        {
+          "name": "rename-or-reorganize-structure",
+          "definition": "Rename, move, or restructure skill files, prefixes, plugin names, or directory layout — typically to avoid name collisions, align with a new platform convention, or rebrand a fork — without altering the skill's behavioral semantics.",
+          "patch_evidence_required": "Diff shows file renames (status \"renamed\") and/or coordinated find-and-replace edits to skill identifiers/prefixes/manifest names across multiple files, with the substantive instructional content unchanged.",
+          "decision_rule": "Applies only to file/path/name reorganization across a skill or repo (e.g. superpowers: -> flows:, flattening directory layout). For renaming/reordering headings inside a SKILL.md, use reorder-steps. For deleting a bundled auxiliary file or a whole skill directory, use remove-auxiliary-file. If the rename repoints host-specific paths/env-vars to a new runtime, use retarget-host-tooling."
+        },
+        {
+          "name": "remove-auxiliary-file",
+          "definition": "Delete a non-instruction auxiliary file from a skill package: a per-skill LICENSE, a vendored dependency tree, a fixture, a creation log, a prompt template, or a bundled reference/script the fork does not want. Covers deleting a whole skill directory only when it is dropped wholesale rather than restructured.",
+          "patch_evidence_required": "Diff removes auxiliary files (status \"removed\"), e.g. deleting LICENSE.txt across skills, removing node_modules, or dropping test-pressure-*.md/CREATION-LOG.md, with no replacement content.",
+          "decision_rule": "Applies to deletion of bundled auxiliary files (or a whole skill directory dropped wholesale). If a workflow stage's supporting file is removed as part of dropping that stage from a procedure, use remove-procedure-step. If upstream body content is removed and replaced with the fork owner's defaults, use personalize-defaults."
+        },
+        {
+          "name": "translate-skill-content",
+          "definition": "Add or maintain a translated version of an existing skill's instructional content — either a sibling localized file (SKILL_ZH.md, SKILL.ja.md, AGENTS_ZH.md) or an in-place translation of the original — so non-English speakers can use the same skill, without changing behavioral semantics.",
+          "patch_evidence_required": "Diff adds a localized skill file whose body is a translation of an existing skill, or edits an existing instruction file to replace source-language prose with target-language prose (near-symmetric add/delete counts), with code/identifiers unchanged.",
+          "decision_rule": "Only for translation between human languages, whether as a parallel file or an in-place rewrite. Voice/tone/style adjustments within one language go under add-voice-rule. If only the frontmatter description or trigger phrases are localized (body left in source language), use modify-skill-metadata."
+        },
+        {
+          "name": "modify-skill-metadata",
+          "definition": "Add, remove, or change skill metadata fields in frontmatter or supporting metadata files. Covers newly introduced fields (author, version, license, tags, disable-model-invocation, keep-coding-instructions) and edits to existing fields such as description, name, allowed-tools, or model, without changing the instructional body.",
+          "patch_evidence_required": "Diff touches skill frontmatter or metadata.json/manifest entries to add, drop, or rewrite metadata fields (e.g. description rephrased, version bumped, tags adjusted, a metadata.json added), with no substantive change to behavioral content.",
+          "decision_rule": "Frontmatter/metadata-only changes — including rewording description to clarify trigger conditions, and adding localized description/trigger phrases. If the body of SKILL.md is also modified substantively, label that part separately. If the change is non-semantic formatting of the body, use style-or-format-content."
+        },
+        {
+          "name": "style-or-format-content",
+          "definition": "Apply non-semantic formatting, markdown style, link conversion, whitespace, capitalization, or grammar polish to skill files without changing skill behavior, instructions, or metadata semantics.",
+          "patch_evidence_required": "Diff shows wording/markdown/whitespace-only changes (link reformatting, blockquote continuation, blank line normalization, capitalization, trailing-newline fixes) with no behavioral or metadata-semantic edits.",
+          "decision_rule": "If the rewording sharpens an instruction's meaning (clearer rule, narrower scope), use tighten-instruction-wording instead. If a frontmatter field's value changes, use modify-skill-metadata."
+        }
+      ]
+    },
+    {
+      "name": "retarget",
+      "definition": "Re-aim a skill at a different target than the one it was written for, by rewriting substantive guidance: a different technical domain or framework, a newer version of the same technology, or a different agent host's tooling and paths. Distinct from lifecycle (whole-skill packaging) and from translate-skill-content (natural language).",
+      "patterns": [
+        {
+          "name": "retarget-domain-stack",
+          "definition": "Rewrite instruction sections and code examples to target a different programming language, framework, or platform domain (e.g. Node/TypeScript -> Python/FastAPI, generic web-app -> Odoo, generic -> Laravel/Rails), replacing the prior domain's concepts, examples, and commands.",
+          "patch_evidence_required": "Diff replacing domain-specific examples, terminology, or commands in an H1/H2 section (or a bundled example script) with those of a different stack/framework/domain, e.g. swapping Jest/Playwright examples for ORM TransactionCase, or npm test for bin/rails test.",
+          "decision_rule": "Apply when the substantive technical subject of a section changes to a different stack/framework/domain. If only the version of the same technology is updated, use retarget-version-api. If the change is about the agent runtime rather than the task domain, use retarget-host-tooling."
+        },
+        {
+          "name": "retarget-version-api",
+          "definition": "Update guidance for the same technology to a newer language/runtime/framework version or newer API, adding sections for new features and dropping deprecated patterns (e.g. Java 17 -> JDK 25 / Spring Boot 4, Python -> 3.11+ type hints, bumping example dates).",
+          "patch_evidence_required": "Diff that raises a stated version baseline or adds sections covering newer-version features/APIs (e.g. 'Virtual Threads (JDK 21+)', 'Self type (Python 3.11+)') for the same underlying technology.",
+          "decision_rule": "Apply when the technology stays the same but its targeted version/API is advanced. If the technology itself changes, use retarget-domain-stack."
+        },
+        {
+          "name": "retarget-host-tooling",
+          "definition": "Rewrite instructions to use a different agent host's tools, invocation syntax, capability constraints, filesystem paths, or environment variables (e.g. Claude Code -> Cursor/Codex/OpenCode/Gemini/Cline/Windsurf), often via an added per-host tools-reference file or path/env remapping.",
+          "patch_evidence_required": "Diff that replaces abstract or Claude-specific tool references with target-host tool names/invocations, adds a references/<host>-tools.md mapping table, notes a host capability difference (e.g. no Task/subagent support), or repoints host paths/env-vars (~/.claude -> ~/.cursor, CLAUDE_* -> CURSOR_*).",
+          "decision_rule": "Apply when the edit re-aims the skill at a different agent runtime via tool/path/env changes. If the change only renames a skill prefix/plugin name without remapping tooling, use rename-or-reorganize-structure. If it adds a platform-conditional fork while keeping the original path, use add-platform-specific-branch. If it adds a host tools-reference doc as a standalone resource, it may co-label with add-reference-doc."
+        }
+      ]
+    },
+    {
+      "name": "procedure",
+      "definition": "Shape the stepwise workflow inside a skill by adding or removing steps and named sub-processes, reordering them, inserting review iterations, or branching on platform.",
+      "patterns": [
+        {
+          "name": "add-procedure-step",
+          "definition": "Insert a new single step (or <=2 sub-steps) into an existing numbered/lettered procedure inside a SKILL.md, embedding into the existing step numbering.",
+          "patch_evidence_required": "Diff adds a heading like `### Step N: ...` or `### Na. ...` slotted into an existing stepwise sequence, with <=2 new sub-steps and content that depends on adjacent steps.",
+          "decision_rule": "If the new content is >=3 sub-steps or has its own entry/exit and could stand alone, use add-sub-workflow. If the change only renumbers existing steps without adding new content, use reorder-steps. If a step is deleted, use remove-procedure-step."
+        },
+        {
+          "name": "add-sub-workflow",
+          "definition": "Introduce a coherent, named sub-process attached to an existing skill, with >=3 sub-steps or its own entry/exit, that can be invoked as a unit.",
+          "patch_evidence_required": "Diff adds a `## <noun-phrase>` section (or sibling reference doc) whose body describes a multi-step procedure with >=3 sub-steps or a self-contained state machine.",
+          "decision_rule": "If only a single step is inserted into an existing sequence, use add-procedure-step. Adding a whole new SKILL.md is creating a new skill rather than modifying an existing one, which is out of scope: assign no label. If the sub-process routes work through an external tool/issue system, also consider integrate-external-system."
+        },
+        {
+          "name": "remove-procedure-step",
+          "definition": "Delete an existing step, named sub-process, dependency, or feature from a skill's procedure to simplify it or fit a constrained host (e.g. dropping a visual-companion step, removing subagent or worktree dependence, deleting a spec-review loop).",
+          "patch_evidence_required": "Diff that removes an H2/H3 step or its flowchart nodes (and possibly deletes its supporting files), shortening the prescribed procedure, with the rest of the workflow preserved.",
+          "decision_rule": "Apply when a discrete stage/dependency is excised from the workflow. If the removal is part of an across-the-board prose condensation, use tighten-instruction-wording or style-or-format-content. If the deleted stage is replaced by an external system, use integrate-external-system."
+        },
+        {
+          "name": "add-review-round",
+          "definition": "Add a review, verification, self-check, or evaluation iteration to an existing workflow, making the agent loop through an additional pass before completing.",
+          "patch_evidence_required": "Diff adds a section or workflow step that introduces a new review/verification/eval pass, e.g. `## Final Review`, `## Self-Review`, `## Code Quality Review`, an extra implementer-then-reviewer loop, or `## Verification Strategy`.",
+          "decision_rule": "Use for added iteration in the workflow. If the new section only routes among existing reviewers without adding an iteration, use add-decision-rule. If the change adds an eval-suite artifact (evals.json) without modifying workflow, use add-eval-suite-resource."
+        },
+        {
+          "name": "reorder-steps",
+          "definition": "Renumber, reorder, split, or merge headings/steps inside a SKILL.md without adding new instructional content.",
+          "patch_evidence_required": "Diff shows heading renames or step number shifts (e.g. `Step 1` -> `Step 2`) with the substantive body content unchanged, or splits one step into two without adding new behavior.",
+          "decision_rule": "If new step content is also added in the same hunk, prefer add-procedure-step. For file-level renames/moves across a skill, use rename-or-reorganize-structure."
+        },
+        {
+          "name": "add-platform-specific-branch",
+          "definition": "Add a platform-conditional or client-conditional fork in instructions or scripts, gating behavior on a specific platform (Windows/macOS/Linux), client (Claude Code/Codex), or environment.",
+          "patch_evidence_required": "Diff adds a section like `## Codex App Compat`, `(Claude Code Only)`, `## Windows ...`, or an if-platform branch in a script, scoping instructions to a particular platform/client.",
+          "decision_rule": "If the branch checks the platform automatically (no user prompt), this label fits. If it wholesale re-aims the skill at a different host's tooling rather than adding a conditional fork, use retarget-host-tooling. If it only adds a tool-integration reference (codex-tools.md) without conditioning behavior, use add-reference-doc."
+        },
+        {
+          "name": "swap-execution-model",
+          "definition": "Change the mechanism by which work is carried out within the workflow: subagent-dispatch <-> inline same-session, generic subagents -> named/model-tiered agents, or adoption of an agent-team / parallel-wave execution model.",
+          "patch_evidence_required": "Diff that changes dispatch mechanics in the procedure, e.g. replacing 'dispatch X subagent' with an inline self-review, introducing @named agents or per-role model tiers, or adding a TeamCreate/agent-teams or wave-based execution path.",
+          "decision_rule": "Apply when the change is specifically to how execution units are spawned or coordinated. If the change routes the workflow through an external task/issue system, use integrate-external-system. If it only adds one reviewer pass, use add-review-round."
+        },
+        {
+          "name": "integrate-external-system",
+          "definition": "Rewire the workflow to depend on an external tool or convention as part of the procedure (e.g. a beads/bd issue tracker, Linear/JIRA issues, OpenSpec, native task tools, Redis state, a /progress command, a custom command-prefix wrapper).",
+          "patch_evidence_required": "Diff that inserts external-tool commands or state files into the procedure (e.g. bd create/ready, TaskCreate/TaskList, openspec/changes paths, redis-cli reads) so workflow steps now read or write that system.",
+          "decision_rule": "Apply when the procedure is made to route through a named external system/convention. If the change only inserts a generic gate with no external dependency, use add-procedure-step. If it changes where design/plan artifacts are stored without an external system, use change-artifact-storage."
+        },
+        {
+          "name": "change-artifact-storage",
+          "definition": "Change the location, structure, or naming of the workflow's persisted artifacts (design docs, plans, specs, task files), or change a commit/no-commit policy for them, without altering the steps themselves.",
+          "patch_evidence_required": "Diff that repoints where the skill writes design/plan/spec artifacts (e.g. docs/superpowers/specs/ -> docs/plans/<project>/), changes filename conventions, or flips a 'commit these files' instruction.",
+          "decision_rule": "Apply when the change is to where/how workflow artifacts are stored or named. If a new step is added to the procedure, use add-procedure-step. If the storage is an external issue/task system, use integrate-external-system."
+        }
+      ]
+    },
+    {
+      "name": "decision",
+      "definition": "Govern when a skill activates and which path the agent takes within a workflow, including consent gates and automated precondition checks.",
+      "patterns": [
+        {
+          "name": "add-activation-criterion",
+          "definition": "Add or sharpen criteria that determine when an agent should activate or invoke a skill, expressed as a `## When to Use` / `## When to Activate` body or equivalent.",
+          "patch_evidence_required": "Diff adds or substantially modifies a `## When to Use` / `## When to Activate` section, or trigger conditions in the frontmatter description that govern when the skill fires.",
+          "decision_rule": "Activation = whether the skill engages at all. Once the skill is engaged, in-flow choices among options go under add-decision-rule. A bypass/anti-trigger list ('Do not use this skill for ...') also belongs here."
+        },
+        {
+          "name": "add-decision-rule",
+          "definition": "Add a branching, selection, or classification rule the agent must apply within a workflow — picking among options, dispatching to a handler, or classifying input into a category.",
+          "patch_evidence_required": "Diff adds content like `## Model Selection`, `## Task Category Classification`, `## Review Dispatch`, or any if-this-then-that selection logic embedded mid-workflow.",
+          "decision_rule": "If the rule decides whether the whole skill activates, use add-activation-criterion. If the rule adds an iteration pass, use add-review-round. If the rule is a hard prohibition, use add-hard-constraint."
+        },
+        {
+          "name": "add-consent-gate",
+          "definition": "Add an explicit user-in-the-loop confirmation or consent step before performing a sensitive action.",
+          "patch_evidence_required": "Diff adds language requiring the agent to ask the user before proceeding, e.g. `ask the user before...`, `confirm with user`, `require explicit consent`, or an option-zero / opt-out branch presented to the user.",
+          "decision_rule": "Consent = user is asked. If the precondition is checked automatically without prompting the user, use add-precondition-check. If the action is forbidden outright with no opt-in, use add-hard-constraint. If the change reframes the skill's overall interactive-vs-autonomous stance, also consider relax-constraint or add-hard-constraint."
+        },
+        {
+          "name": "add-precondition-check",
+          "definition": "Add an automated pre-action check that verifies environment, state, or invariants before proceeding, without prompting the user.",
+          "patch_evidence_required": "Diff adds a step or section like `## Step 0: Check if Already in an Isolated Workspace`, `## Detect Environment`, or a programmatic check inside an instruction (verify file exists, verify CWD, verify version).",
+          "decision_rule": "If the check involves asking the user, use add-consent-gate. If the check is implemented as a defensive guard inside a shell/python script, use script-add-safety-guard."
+        }
+      ]
+    },
+    {
+      "name": "policy",
+      "definition": "Set governing rules that influence many downstream behaviors: precedence orderings, positive design principles, hard prohibitions or mandates, and relaxations of existing enforcement.",
+      "patterns": [
+        {
+          "name": "add-priority-hierarchy",
+          "definition": "Add an ordering or precedence among multiple existing rules/sources/instructions, specifying which wins when they conflict.",
+          "patch_evidence_required": "Diff adds explicit precedence content, e.g. `## Instruction Priority` with an ordered list (system > project > user), a CRITICAL > NORMAL ranking, or `when X and Y conflict, prefer X`.",
+          "decision_rule": "Hierarchy = how to resolve conflicts between >=2 rules. A single positive principle without precedence belongs in add-design-principle. A do-not / never rule belongs in add-hard-constraint."
+        },
+        {
+          "name": "add-design-principle",
+          "definition": "Add a positive, high-level design philosophy or methodology principle that influences many downstream behaviors but does not itself forbid an action.",
+          "patch_evidence_required": "Diff adds a principle/philosophy section or paragraph, e.g. `context isolation principle`, `YAGNI`, `Design first`, `Happy path first`, that the agent is expected to internalize and apply throughout the skill.",
+          "decision_rule": "Positive, generative principle from which specific behaviors derive. If the rule explicitly forbids something (never/must not), use add-hard-constraint. If it orders multiple rules, use add-priority-hierarchy."
+        },
+        {
+          "name": "add-hard-constraint",
+          "definition": "Add an explicit prohibition or mandatory rule using never / must not / always / required language, forbidding or requiring a specific concrete action, or strengthen existing wording into such a rule (advisory -> imperative, adding a HARD-GATE).",
+          "patch_evidence_required": "Diff adds or strengthens rule text with strong modal verbs — `never`, `must not`, `do not`, `always`, `required`, `mandatory`, `HARD-GATE` — that names a concrete forbidden or required action.",
+          "decision_rule": "Distinguishing word test: if the patch adds/strengthens never/must not/always/required -> this label. If it adds positive guidance with no prohibition -> add-design-principle. If it orders rules -> add-priority-hierarchy. If it relaxes an existing mandate -> relax-constraint. Safety-flavored constraints (don't expose secrets) go under add-instruction-guardrail when the focus is safety."
+        },
+        {
+          "name": "relax-constraint",
+          "definition": "Weaken or remove existing enforcement: relax mandatory language to advisory (MUST -> should, Iron Law -> guideline), demote a step from REQUIRED to OPTIONAL, delete or neutralize a coercive enforcement block (e.g. an EXTREMELY-IMPORTANT 'you have no choice' wrapper), or convert an interactive/approval-gated stance to autonomous.",
+          "patch_evidence_required": "Diff that converts `MUST`/`Iron Law`/`REQUIRED` to `should`/`Recommended`/`OPTIONAL`, deletes/neutralizes a coercive enforcement block, or removes 'ask the user' steps in favor of 'infer and proceed'.",
+          "decision_rule": "Apply when the change lowers the obligation level or removes coercion from existing instructions. If it raises obligation, use add-hard-constraint. If a discrete approval step is removed as a workflow stage, also consider remove-procedure-step."
+        }
+      ]
+    },
+    {
+      "name": "guardrail",
+      "definition": "Add instruction-level safety, security, or destructive-action protections that prevent the agent from causing harm.",
+      "patterns": [
+        {
+          "name": "add-instruction-guardrail",
+          "definition": "Add SKILL.md / instruction-level safety, security, or destructive-action protection — guidance that prevents the agent from causing harm via dangerous commands, secret leakage, or irreversible operations.",
+          "patch_evidence_required": "Diff adds prose-level safety guidance: a list of dangerous commands to refuse, a secret-redaction rule for outputs, a destructive-operation confirmation requirement, a sensitive-resource access rule, or a pinned/checksummed fetch URL.",
+          "decision_rule": "Instruction-level (SKILL.md prose). Script-level safety code (fail-closed entry, allowlist) goes under script-add-safety-guard. A generic never-rule without safety motivation goes under add-hard-constraint."
+        }
+      ]
+    },
+    {
+      "name": "polish",
+      "definition": "Sharpen or clarify the wording of existing instructions without introducing new rules, content, or behavior.",
+      "patterns": [
+        {
+          "name": "tighten-instruction-wording",
+          "definition": "Sharpen, clarify, or narrow the scope of existing instructions without introducing new rules, decisions, principles, or content categories.",
+          "patch_evidence_required": "Diff edits existing instructional prose with roughly balanced +/- counts; the underlying rule is the same, just expressed more precisely (replace vague phrasing with specifics, add a qualifier, remove ambiguity).",
+          "decision_rule": "Catch-all for in-place wording polish. If the edit introduces a new never/always rule -> add-hard-constraint. If it adds new content -> one of the add-* labels. If it's purely formatting -> style-or-format-content."
+        }
+      ]
+    },
+    {
+      "name": "spec",
+      "definition": "Specify the shape of the agent's output or the artifacts that accompany its instructions: output formats, scoring rubrics, examples, and reusable templates.",
+      "patterns": [
+        {
+          "name": "add-output-format-spec",
+          "definition": "Define or constrain the required shape of the agent's output — JSON structure, required fields, format markers, mandatory output sections.",
+          "patch_evidence_required": "Diff adds a section like `## Output Format`, `## REQUIRED Output Format`, `## Response Schema`, or specifies that the agent's output must follow a particular JSON shape, headings, or template.",
+          "decision_rule": "About output shape only. If it's a scoring rubric the agent uses to evaluate something, use add-scoring-rubric. If it's a reusable template body, use add-template."
+        },
+        {
+          "name": "add-scoring-rubric",
+          "definition": "Add evaluation criteria, scoring anchors, rubric weights, or rating scales the agent uses to assess something.",
+          "patch_evidence_required": "Diff adds content with scoring weights, qualitative anchors (`Score 5 if ...; Score 1 if ...`), evaluation criteria, or named priorities with weights.",
+          "decision_rule": "Used to evaluate. If the rubric is also the output the agent emits (the rubric IS the response), it can be co-labelled with add-output-format-spec."
+        },
+        {
+          "name": "add-example",
+          "definition": "Add a concrete illustrative example, sample input/output, or worked case meant to clarify a rule — not intended for direct reuse.",
+          "patch_evidence_required": "Diff adds an `## Examples` section, sample input/output snippet, or worked-case illustration tied to existing instructional content. The example is one-shot illustrative, not a fill-in-the-blank artifact.",
+          "decision_rule": "Reuse test: if the artifact is expected to be copied and filled (placeholders/slots), use add-template. If it's a one-off illustration, use add-example."
+        },
+        {
+          "name": "add-template",
+          "definition": "Add a reusable boilerplate or skeleton intended to be copied and filled in with project-specific content.",
+          "patch_evidence_required": "Diff adds a template artifact with explicit placeholders (`{slot}`, `[TODO]`, `<your X>`) or a sibling `*-template.md` file expected to be the basis of new content.",
+          "decision_rule": "Has slots or is meant to be copy-filled. If a `*-prompt.md` template is added as a separate file under the skill dir, use add-prompt-template-resource instead."
+        }
+      ]
+    },
+    {
+      "name": "style",
+      "definition": "Add voice, tone, register, or writing-style guidance for the agent's prose output.",
+      "patterns": [
+        {
+          "name": "add-voice-rule",
+          "definition": "Add or refine voice, tone, register, or writing-style guidance the agent should follow when producing prose output.",
+          "patch_evidence_required": "Diff adds content like `## Tone Calibration`, `## Approved Voice Patterns`, `## Writing Style Rules`, or rules constraining sentence length, formality, vocabulary, or persona.",
+          "decision_rule": "About how prose is voiced. Pure markdown/whitespace polish goes under style-or-format-content. Translation between human languages goes under translate-skill-content."
+        }
+      ]
+    },
+    {
+      "name": "resource",
+      "definition": "Add bundled skill-local files the SKILL.md draws on, or other non-instruction assets: reference docs, prompt templates, tool configs, evaluation suites, and generated outputs.",
+      "patterns": [
+        {
+          "name": "add-reference-doc",
+          "definition": "Add a bundled reference document under the skill directory — typically `references/*.md`, a catalogue, glossary, or best-practices doc — that the SKILL.md points to for additional context.",
+          "patch_evidence_required": "Diff adds a new file under the skill dir (commonly `references/*.md` or sibling `*-reference.md`) containing reference material, not a prompt, template, config, or eval artifact.",
+          "decision_rule": "Resource is a reference doc (anthropic-best-practices.md, codex-tools.md, priority-catalogue.md). If the file is a prompt template, use add-prompt-template-resource. If it is a tool/provider config, use add-tool-config."
+        },
+        {
+          "name": "add-prompt-template-resource",
+          "definition": "Add a skill-local prompt template file — typically a `*-prompt.md` such as a reviewer/implementer/spec-reviewer prompt — used to instantiate a subagent or external invocation.",
+          "patch_evidence_required": "Diff adds a `*-prompt.md` or similarly-named file under the skill directory whose body is structured as a fill-in prompt template (variables, role framing, output spec for the invoked agent).",
+          "decision_rule": "Specifically prompt templates for subagent dispatch. Generic templates with slots go under add-template. Reference docs go under add-reference-doc."
+        },
+        {
+          "name": "add-tool-config",
+          "definition": "Add a skill-local configuration/manifest file for a specific tool, provider, or external integration.",
+          "patch_evidence_required": "Diff adds a configuration file (commonly `providers/*.json`, `*-config.{json,yaml}`, manifest entries) that parameterizes how the skill integrates with an external tool/provider.",
+          "decision_rule": "Resource is a structured config (JSON/YAML/TOML) bound to a tool. Markdown reference material goes under add-reference-doc. Eval fixtures go under add-eval-suite-resource."
+        },
+        {
+          "name": "add-eval-suite-resource",
+          "definition": "Add an evaluation suite — evaluation JSON, test fixtures, scoring scripts, or eval-runner artifacts — used to assess skill quality.",
+          "patch_evidence_required": "Diff adds files under `evals/`, `eval/`, `tests/` within a skill directory, or an `evals.json` describing eval cases.",
+          "decision_rule": "About automated quality assessment artifacts. A SKILL.md section that adds a new review pass goes under add-review-round, not here. Tests for a bundled script go under script-add-feature only if they change behavior; otherwise they are eval/test resources here."
+        },
+        {
+          "name": "add-output-asset",
+          "definition": "Add a generated output artifact or showcase produced by the skill (e.g. an example HTML/art file, a rendered viewer, a persona role file), bundled as a demonstration rather than as instruction or executable logic.",
+          "patch_evidence_required": "Diff adds files that are outputs/showcases/personas (e.g. output/shiva_art.html, example.html, agents/<persona>.md) rather than instruction, reference, prompt, config, or eval files.",
+          "decision_rule": "Apply when the added file is a generated demonstration asset. If it is a reference doc, use add-reference-doc; a prompt template, add-prompt-template-resource; a fill-in skeleton, add-template; bundled executable logic, script-add-feature."
+        }
+      ]
+    },
+    {
+      "name": "personalize",
+      "definition": "Fork-owner edits that replace or layer personal preferences and defaults onto an existing skill while keeping it in place.",
+      "patterns": [
+        {
+          "name": "personalize-defaults",
+          "definition": "Fork-owner edits that strip, replace, or layer personal preferences/defaults onto an existing skill — replacing upstream defaults with the fork owner's taste while keeping the skill in place.",
+          "patch_evidence_required": "Diff removes substantial portions of an upstream skill's body and/or injects fork-specific defaults (palette, canvas size, gradient color, ratio, personal preference notes, repointed personal vault/home paths); commit messages mention `personal preference`, `personal note`, or fork-specific tweaks.",
+          "decision_rule": "Specifically replaces upstream content with personal taste/defaults. Wholesale deletion of a skill or its bundled files is remove-auxiliary-file. Adding new voice rules without removing originals is add-voice-rule. De-personalizing upstream hardcoded paths to generic placeholders is tighten-instruction-wording or style-or-format-content."
+        }
+      ]
+    },
+    {
+      "name": "script",
+      "definition": "Extend, secure, validate, optimize, fix, or refactor skill-local executable scripts.",
+      "patterns": [
+        {
+          "name": "script-add-feature",
+          "definition": "Add a new capability, flag, mode, or behavior to an existing skill-local script — extending what the script can do rather than fixing/securing/optimizing existing behavior. Also covers adding a brand-new bundled script or server.",
+          "patch_evidence_required": "Diff modifies or adds a script under a skill dir to add new code paths/features (new CLI flag/subcommand, new event handler, new output mode, a new server/module) with no evidence the change is primarily a bug fix, safety addition, performance optimization, or refactor.",
+          "decision_rule": "Default for substantive script additions when no other script-* label fits. Safety-flavored additions go under script-add-safety-guard. Input checks go under script-add-input-validation. Pure restructuring goes under script-refactor."
+        },
+        {
+          "name": "script-add-safety-guard",
+          "definition": "Add a defensive/safety guard inside a skill-local script: fail-closed entrypoint, re-entrancy guard, cooldown/throttle, path allowlist/blocklist, secret redaction, sensitive-resource gating.",
+          "patch_evidence_required": "Diff adds script code that explicitly prevents an unsafe execution path — sentinel check before sensitive op, opt-out env var gate, allowlist of permitted args, secret-scrubbing on output, throttle to prevent runaway loop.",
+          "decision_rule": "Script-level defensive code. SKILL.md-level safety language goes under add-instruction-guardrail. Input shape/type checks go under script-add-input-validation."
+        },
+        {
+          "name": "script-add-input-validation",
+          "definition": "Add validation for inputs to a skill-local script: argv shape, file existence, path/type checks, schema validation of parsed input.",
+          "patch_evidence_required": "Diff adds script code that checks the shape/existence/type of an input before using it — argparse choices, isinstance checks, file existence verification, schema validation against parsed JSON.",
+          "decision_rule": "Specifically input shape/existence checks. Defensive code against malicious or runaway execution goes under script-add-safety-guard."
+        },
+        {
+          "name": "script-optimize",
+          "definition": "Improve the performance, latency, memory use, dependency footprint, or token cost of a skill-local script while preserving correctness.",
+          "patch_evidence_required": "Diff swaps a slower mechanism for a faster one (lib swap, native API, caching/memoization, streaming/chunking, parallelism, output reduction) and commit messages or code comments cite the perf intent.",
+          "decision_rule": "Explicit perf intent. If the change adds a new capability rather than speeding up an existing one, use script-add-feature."
+        },
+        {
+          "name": "script-fix-logic-bug",
+          "definition": "Correct a logic, algorithm, or correctness defect in an existing skill-local script that was producing wrong results regardless of platform.",
+          "patch_evidence_required": "Diff modifies an existing script to fix incorrect behavior (wrong output, wrong control flow, off-by-one, race condition, broken parser); commit message or context names the prior defect.",
+          "decision_rule": "Platform-agnostic correctness fix. If the bug only manifests on a specific platform (BSD/Windows/shell variant), use script-fix-platform-compat."
+        },
+        {
+          "name": "script-fix-platform-compat",
+          "definition": "Correct a platform-specific compatibility defect in a skill-local script — failures that occur only on certain OS, shell, or library variants.",
+          "patch_evidence_required": "Diff modifies a script for platform-conditional correctness: BSD vs GNU coreutils, Windows path separators, sh vs bash, Python 2 vs 3 leftover, locale-dependent behavior, explicit utf-8 encoding for non-ASCII.",
+          "decision_rule": "Bug only triggers on specific platforms/environments. General correctness bugs go under script-fix-logic-bug. Adding a platform branch to instructions rather than fixing a script goes under add-platform-specific-branch."
+        },
+        {
+          "name": "script-refactor",
+          "definition": "Restructure or reorganize a skill-local script (extract shared helper, rename identifiers consistently, deduplicate code, replace hardcoded values with a shared resolver) without changing observed behavior or output.",
+          "patch_evidence_required": "Diff shows behavior-preserving restructuring: extracting a shared helper called from multiple scripts, a coordinated rename across scripts (e.g. SCREEN_DIR -> SESSION_DIR), or replacing inline hardcoded values with calls to a new shared resolver. The script's observable input/output contract is unchanged.",
+          "decision_rule": "Behavior-preserving restructuring. If a new capability is introduced (new resolver, new lib, new helper that didn't exist), label that part script-add-feature; the refactor label covers call sites switching from inline to the shared mechanism. For file-level renames across the package, use rename-or-reorganize-structure."
+        }
+      ]
+    },
+    {
+      "name": "fix",
+      "definition": "Correct broken, incorrect, or outdated content in a skill's prose instructions or reference docs.",
+      "patterns": [
+        {
+          "name": "fix-skill-instruction-bug",
+          "definition": "Correct broken, incorrect, or outdated content in SKILL.md or skill-local reference docs — wrong example, broken link, stale URL, incorrect command, misleading description.",
+          "patch_evidence_required": "Diff edits the prose body of existing SKILL.md / references / templates to replace incorrect content with correct content; commit message or context names the prior defect.",
+          "decision_rule": "Instruction-level (prose) bug. Script bugs go under script-fix-logic-bug or script-fix-platform-compat. If the fix is purely formatting/whitespace, use style-or-format-content. If a frontmatter field is the wrong value, use modify-skill-metadata."
+        }
+      ]
+    }
+  ]
+}
