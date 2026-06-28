@@ -13,6 +13,14 @@ Agent skills (reusable instruction sets for LLM-based agents) are rapidly evolvi
 - Security-relevant modifications appear in a non-trivial share of instances, spanning both hardening and relaxation changes.
 - Commit messages systematically under-describe the *why* behind skill adaptations.
 
+## Selected Upstream Repositories
+
+- [anthropics/skills](https://github.com/anthropics/skills)
+- [obra/superpowers](https://github.com/obra/superpowers)
+- [affaan-m/everything-claude-code](https://github.com/affaan-m/everything-claude-code)
+- [mattpocock/skills](https://github.com/mattpocock/skills)
+- [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills)
+- [ComposioHQ/awesome-claude-skills](https://github.com/ComposioHQ/awesome-claude-skills)
 ## Dataset
 
 | Split | File | Rows |
