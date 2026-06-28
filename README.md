@@ -4,7 +4,7 @@
 
 ## Overview
 
-Agent skills (reusable instruction sets for LLM-based agents) are rapidly evolving on GitHub, yet little is known about how developers adapt them to new contexts. This study mines 1,351 fork-level skill modifications across 6 upstream repositories, classifies adaptation patterns using a grounded-theory taxonomy, and analyzes security-relevant changes and commit-message intent.
+Agent skills (reusable instruction sets for LLM-based agents) are rapidly evolving on GitHub, yet little is known about how developers adapt them to new contexts. This study mines 1,126 fork-level skill modifications across 6 upstream repositories, classifies adaptation patterns using a grounded-theory taxonomy, and analyzes security-relevant changes and commit-message intent.
 
 **Key findings:**
 
@@ -18,7 +18,7 @@ Agent skills (reusable instruction sets for LLM-based agents) are rapidly evolvi
 | Split | File | Rows |
 |-------|------|------|
 | Labeled instances | `data/artifact/instances.public.jsonl` | 1,126 |
-| Commit-message instances | `data/artifact/msg_instances.public.jsonl` | 277 |
+| Commit-message instances (subset) | `data/artifact/msg_instances.public.jsonl` | 277 |
 
 Fork-owner identifiers are pseudonymized (UUID v5); secrets and local paths are redacted. Upstream repository names are preserved.
 
