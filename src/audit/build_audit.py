@@ -133,14 +133,14 @@ def build_tasks(sample_dir: Path, outputs_dir: Path,
             continue
         output_rec = json.loads(output_path.read_text())
         input_rec = json.loads(input_path.read_text())
-        labels_md, _ = render_labels(output_rec)
+        labels_md, has_low = render_labels(output_rec)
         predicted = [a.get("name") for a in output_rec.get("label_assignments", [])]
         tasks.append({
             "id": 0,
             "data": {
                 "record": name,
                 "set": set_tag,
-                "has_low": set_tag == "low-confidence",
+                "has_low": has_low,
                 "upstream": output_rec.get("upstream", ""),
                 "fork_owner": output_rec.get("fork_owner", ""),
                 "fork_branch": output_rec.get("fork_branch", ""),

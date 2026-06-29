@@ -49,7 +49,7 @@ file_rules:
       - "credentials\\.json"
       - "secrets\\.(yaml|yml|json|env)"
       - "password"
-      - "token"
+      - "(access|auth|refresh|secret|bearer|oauth|session|api|csrf|jwt)[_-]?tokens?"
       - "api[_-]?key"
     description: "Attempt to Access Sensitive Files"
 
