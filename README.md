@@ -4,7 +4,7 @@
 
 ## Rebuttal TODO: September 25
 
-The current priority is the rebuttal for paper #1322, due **September 25, 2026**. The exact cutoff time, timezone and response length still need confirmation. Work is on the `rebuttal` branch and builds on `legacy/`. See [Rebuttal.md](Rebuttal.md) for results and the response draft, and [coauthor annotation instructions](legacy/annotation/README.md) for the ready-to-use forms.
+The deadline is **September 25, 2026**. The exact cutoff time, timezone and response length still need confirmation. Work is on the `rebuttal` branch and builds on `legacy/`. See [Rebuttal.md](Rebuttal.md) for results and the response draft, and [coauthor annotation instructions](legacy/annotation/README.md) for the ready-to-use forms.
 
 Both forms now use version `human-unseen-v2-20260923`. Update your checkout before starting. The old forms are superseded; preserve existing exports separately and never merge old and new task IDs. Of the 1,126 analyzed instances, 488 have known prior exposure and 638 remain eligible. The same exclusion rule reduces security validation from 209 to 109 positives. Original descriptive statistics retain their original denominators.
 
@@ -36,7 +36,7 @@ This branch includes the main project, the legacy implementation, previously rel
 
 ## Overview
 
-The current priority is responding to reviews #1322A-C using the submitted study and implementation under `legacy/`. See [Rebuttal.md](Rebuttal.md) for verified evidence, pending validation and the response draft, and [ADR 0033](docs/adr/0033-prioritize-legacy-rebuttal.md) for scope.
+See [Rebuttal.md](Rebuttal.md) for verified evidence, pending validation and the response draft, and [ADR 0033](docs/adr/0033-prioritize-legacy-rebuttal.md) for scope.
 
 This project studies modification patterns, package length and security changes in public forks of agent skills. Current design decisions and remaining questions are in [docs/adr/](docs/adr/README.md). The earlier implementation and datasets are in [legacy/](legacy/README.md), and the manuscript is in [paper/](paper/main.tex).
 

@@ -6,7 +6,7 @@
 
 Coauthors should use the [rebuttal annotation package](annotation/README.md), which opens locally in a browser and contains no model answers. Current responsibilities and completed analyses are in the root [rebuttal TODO](../README.md#rebuttal-todo-september-25).
 
-This implementation is the basis for the current rebuttal and revision of paper #1322. The [rebuttal tracker](../Rebuttal.md) distinguishes verified findings from pending validation; [ADR 0033](../docs/adr/0033-prioritize-legacy-rebuttal.md) records the priority and scope.
+The [rebuttal tracker](../Rebuttal.md) distinguishes verified findings from pending validation; [ADR 0033](../docs/adr/0033-prioritize-legacy-rebuttal.md) records the priority and scope.
 
 Agent skills (reusable instruction sets for LLM-based agents) are rapidly evolving on GitHub, yet little is known about how developers adapt them to new contexts. This study analyzes 1,126 branch adaptation instances from 945 fork identities across 6 upstream repositories, classifies adaptation patterns using an empirical taxonomy, and analyzes textual security indicators and commit-message coverage.
 
