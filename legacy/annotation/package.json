@@ -1,0 +1,19 @@
+{
+  "run_id": "human-293-20260923",
+  "population": 1220,
+  "blind_sample": 293,
+  "security_instances": 209,
+  "security_lines": 1521,
+  "answer_fields_included": false,
+  "redaction": "Credential-shaped strings are replaced; task IDs and sample membership are unchanged.",
+  "files": {
+    "blind.html": {
+      "sha256": "ae19d8aabd30baee5448343633e29faa7e615048e0c72e9102fba97ae21384c3",
+      "tasks": 293
+    },
+    "security.html": {
+      "sha256": "73e11f1a78397554a661c83dcddf6b03cdbe4883576f751242e0823ae4f4b0d7",
+      "tasks": 209
+    }
+  }
+}

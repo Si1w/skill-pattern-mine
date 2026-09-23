@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Skill-Pattern Label Audit</title>
+  <style>
+    :root {
+      --line: #e2e8f0; --muted: #64748b; --bg: #f8fafc;
+      --ok: #16a34a; --warn: #d97706; --bad: #dc2626; --accent: #2563eb;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, system-ui, sans-serif; color: #0f172a; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+    #bar {
+      display: flex; align-items: center; gap: 14px; padding: 8px 16px;
+      border-bottom: 1px solid var(--line); background: var(--bg); position: sticky; top: 0; z-index: 5;
+    }
+    #bar h1 { font-size: 15px; margin: 0; font-weight: 600; }
+    #bar .spacer { flex: 1; }
+    #bar button {
+      padding: 6px 12px; border: 1px solid #cbd5e1; border-radius: 6px;
+      background: #fff; cursor: pointer; font-size: 13px;
+    }
+    #bar button:hover { background: #eef2f7; }
+    #count { font-size: 13px; color: var(--muted); }
+    #count .low { color: var(--warn); font-weight: 600; }
+    #progress { font-variant-numeric: tabular-nums; }
+
+    #main { display: grid; grid-template-columns: 1fr 1fr; gap: 0; height: calc(100vh - 49px); }
+    .pane { overflow: auto; padding: 16px 20px; }
+    .pane.left { border-right: 1px solid var(--line); }
+    .pane h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 10px; }
+
+    pre.diff { background: #0f172a; color: #e2e8f0; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+    pre.diff .add { color: #4ade80; } pre.diff .del { color: #f87171; } pre.diff .hunk { color: #38bdf8; }
+    .commitmsg { background: #f1f5f9; border-left: 3px solid #cbd5e1; padding: 8px 10px; border-radius: 4px; margin: 6px 0; white-space: pre-wrap; font-size: 12.5px; }
+    .filehdr { font-weight: 600; margin: 14px 0 4px; font-size: 13px; }
+    .filehdr .meta { color: var(--muted); font-weight: 400; }
+    .empty-patch { color: var(--warn); font-style: italic; font-size: 12.5px; }
+
+    .pred { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 8px 0; }
+    .pred .name { font-weight: 600; }
+    .conf { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 600; margin-left: 8px; }
+    .conf.high { background: #dcfce7; color: var(--ok); }
+    .conf.medium { background: #fef3c7; color: var(--warn); }
+    .conf.low { background: #fee2e2; color: var(--bad); }
+    .pred ul { margin: 6px 0 0; padding-left: 18px; font-size: 12.5px; color: #334155; }
+    .rationale { background: var(--bg); border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-top: 10px; }
+
+    /* Audit form lives in the right pane, below the prediction. */
+    #form { margin-top: 18px; border-top: 2px solid var(--line); padding-top: 14px; }
+    #form h2 { color: #0f172a; }
+    .q { margin: 12px 0; }
+    .q > label.qlabel { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+    .verdict button { margin-right: 6px; padding: 6px 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; cursor: pointer; font-size: 13px; }
+    .verdict button.sel[data-v="correct"] { background: #dcfce7; border-color: var(--ok); }
+    .verdict button.sel[data-v="partially-correct"] { background: #fef3c7; border-color: var(--warn); }
+    .verdict button.sel[data-v="incorrect"] { background: #fee2e2; border-color: var(--bad); }
+    .chips { display: flex; flex-wrap: wrap; gap: 5px; max-height: 160px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+    .chip { font-size: 11.5px; padding: 3px 9px; border: 1px solid #cbd5e1; border-radius: 999px; cursor: pointer; background: #fff; user-select: none; }
+    .chip.sel-rm { background: #fee2e2; border-color: var(--bad); color: var(--bad); }
+    .chip.sel-add { background: #dcfce7; border-color: var(--ok); color: var(--ok); }
+    .chip.predicted { outline: 2px solid #bfdbfe; }
+    textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px; font: inherit; font-size: 13px; resize: vertical; }
+    .nav { display: flex; gap: 8px; margin-top: 14px; }
+    .nav button { flex: 1; padding: 9px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; cursor: pointer; font-size: 13px; font-weight: 600; }
+    .nav button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .hint { font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+    .auditedTag { font-size: 11px; color: var(--ok); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div id="bar">
+    <h1>Skill-Pattern Label Audit</h1>
+    <span id="count"></span>
+    <span class="spacer"></span>
+    <button id="prevBtn">← Prev (k)</button>
+    <button id="nextBtn">Next (j) →</button>
+    <button id="exportBtn">Export verdicts (JSON)</button>
+  </div>
+
+  <div id="main">
+    <div class="pane left">
+      <h2>Diff — commit messages + raw patch</h2>
+      <div id="diff"></div>
+    </div>
+    <div class="pane right">
+      <h2>Model prediction <span id="auditedTag" class="auditedTag"></span></h2>
+      <div id="pred"></div>
+
+      <div id="form">
+        <h2>Audit</h2>
+        <div class="q verdict">
+          <label class="qlabel">1. Are the predicted labels correct overall?</label>
+          <button data-v="correct">Correct (1)</button>
+          <button data-v="partially-correct">Partial (2)</button>
+          <button data-v="incorrect">Incorrect (3)</button>
+        </div>
+        <div class="q">
+          <label class="qlabel">2. Predicted labels that should be REMOVED</label>
+          <div class="chips" id="removeChips"></div>
+        </div>
+        <div class="q">
+          <label class="qlabel">3. Correct labels that are MISSING (should be added)</label>
+          <div class="chips" id="addChips"></div>
+        </div>
+        <div class="q">
+          <label class="qlabel">4. Notes</label>
+          <textarea id="notes" rows="3" placeholder="Optional auditor notes / reasoning"></textarea>
+        </div>
+        <div class="nav">
+          <button id="prevBtn2">← Prev</button>
+          <button id="saveNext" class="primary">Save &amp; Next (Enter)</button>
+        </div>
+        <div class="hint">Shortcuts: 1/2/3 verdict · j/k or ←/→ navigate · Enter save &amp; next · blue outline = predicted label. Progress auto-saves to this browser.</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./tasks.js"></script>
+  <script>
+    // tasks.js ships { order: [...record names, low-first], records: {name: task} }
+    // for IDE readability; flatten back to an ordered array for traversal here.
+    const SRC = window.AUDIT_TASKS || { order: [], records: {} };
+    const TASKS = SRC.order.map(name => SRC.records[name]);
+    const STORE_KEY = "skill_audit_verdicts_v1";
+    const PATTERNS = ["rename-or-reorganize-structure","remove-auxiliary-file","translate-skill-content","modify-skill-metadata","style-or-format-content","retarget-domain-stack","retarget-version-api","retarget-host-tooling","add-procedure-step","add-sub-workflow","remove-procedure-step","add-review-round","reorder-steps","add-platform-specific-branch","swap-execution-model","integrate-external-system","change-artifact-storage","add-activation-criterion","add-decision-rule","add-consent-gate","add-precondition-check","add-priority-hierarchy","add-design-principle","add-hard-constraint","relax-constraint","add-instruction-guardrail","tighten-instruction-wording","add-output-format-spec","add-scoring-rubric","add-example","add-template","add-voice-rule","add-reference-doc","add-prompt-template-resource","add-tool-config","add-eval-suite-resource","add-output-asset","personalize-defaults","script-add-feature","script-add-safety-guard","script-add-input-validation","script-optimize","script-fix-logic-bug","script-fix-platform-compat","script-refactor","fix-skill-instruction-bug"];
+
+    const AUTHOR_KEY = "skill_audit_author_id_v1";
+    let idx = 0;
+    const verdicts = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
+
+    // UUIDv7: 48-bit millisecond timestamp + random, so ids sort by creation
+    // time and distinct browsers/auditors get distinct ids. crypto.randomUUID
+    // only yields v4 (no time prefix), so build v7 by hand. Generated once per
+    // browser and reused for every export, identifying the auditor.
+    function uuidv7(nowMs) {
+      const ts = BigInt(nowMs);
+      const bytes = new Uint8Array(16);
+      for (let i = 0; i < 6; i++) bytes[i] = Number((ts >> BigInt(40 - 8 * i)) & 0xffn);
+      crypto.getRandomValues(bytes.subarray(6));
+      bytes[6] = (bytes[6] & 0x0f) | 0x70;          // version 7
+      bytes[8] = (bytes[8] & 0x3f) | 0x80;          // variant
+      const hex = [...bytes].map(b => b.toString(16).padStart(2, "0")).join("");
+      return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+    }
+    function authorId() {
+      let id = localStorage.getItem(AUTHOR_KEY);
+      if (!id) { id = uuidv7(Date.now()); localStorage.setItem(AUTHOR_KEY, id); }
+      return id;
+    }
+
+    function save() { localStorage.setItem(STORE_KEY, JSON.stringify(verdicts)); }
+    function esc(s) { return (s || "").replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+
+    function predictedOf(task) {
+      return task.data.predicted_labels === "(none)" ? []
+        : task.data.predicted_labels.split(", ").map(s => s.trim()).filter(Boolean);
+    }
+
+    // Render the markdown-ish diff blob from build_ui.py into colored HTML.
+    function renderDiff(md) {
+      const out = [];
+      const lines = md.split("\n");
+      let i = 0;
+      while (i < lines.length) {
+        const ln = lines[i];
+        if (ln.startsWith("## Commit messages") || ln.startsWith("## Files")) { i++; continue; }
+        if (ln.startsWith("### ")) { out.push(`<div class="filehdr">${esc(ln.slice(4))}</div>`); i++; continue; }
+        if (ln.startsWith("_renamed") || ln.startsWith("_(empty")) {
+          out.push(`<div class="empty-patch">${esc(ln.replace(/_/g, ""))}</div>`); i++; continue;
+        }
+        if (ln.startsWith("```diff")) {
+          const buf = []; i++;
+          while (i < lines.length && !lines[i].startsWith("```")) { buf.push(lines[i]); i++; }
+          i++;
+          const colored = buf.map(l => {
+            const cls = l.startsWith("+") ? "add" : l.startsWith("-") ? "del" : l.startsWith("@@") ? "hunk" : "";
+            return cls ? `<span class="${cls}">${esc(l)}</span>` : esc(l);
+          }).join("\n");
+          out.push(`<pre class="diff">${colored}</pre>`); continue;
+        }
+        if (ln.startsWith("```")) {
+          const buf = []; i++;
+          while (i < lines.length && !lines[i].startsWith("```")) { buf.push(lines[i]); i++; }
+          i++;
+          out.push(`<div class="commitmsg">${esc(buf.join("\n"))}</div>`); continue;
+        }
+        i++;
+      }
+      return out.join("");
+    }
+
+    // Render the prediction markdown blob into HTML cards.
+    function renderPred(md, predicted) {
+      const out = [];
+      const lines = md.split("\n");
+      let i = 0, openUl = false;
+      const closeUl = () => { if (openUl) { out.push("</ul></div>"); openUl = false; } };
+      while (i < lines.length) {
+        const ln = lines[i];
+        if (ln.startsWith("### `")) {
+          closeUl();
+          const m = ln.match(/### `([^`]+)` — confidence: \*\*(\w+)\*\*/);
+          const name = m ? m[1] : ln, conf = m ? m[2] : "?";
+          out.push(`<div class="pred"><div><span class="name">${esc(name)}</span><span class="conf ${conf}">${conf}</span></div><ul>`);
+          openUl = true; i++; continue;
+        }
+        if (ln.startsWith("- ")) { out.push(`<li>${esc(ln.slice(2))}</li>`); i++; continue; }
+        if (ln.startsWith("  ↳")) { out.push(`<li style="list-style:none;color:#64748b">${esc(ln.trim())}</li>`); i++; continue; }
+        if (ln.startsWith("## Rationale")) { closeUl(); i++; const r = []; while (i < lines.length && !lines[i].startsWith("---")) { r.push(lines[i]); i++; } out.push(`<div class="rationale"><b>Rationale.</b> ${esc(r.join(" ").trim())}</div>`); continue; }
+        if (ln.startsWith("---") || ln.startsWith("_patch_sufficiency")) { closeUl(); out.push(`<div class="hint">${esc(ln.replace(/[_*]/g, ""))}</div>`); i++; continue; }
+        if (ln.startsWith("_(no labels")) { out.push(`<div class="empty-patch">(no labels assigned)</div>`); i++; continue; }
+        i++;
+      }
+      closeUl();
+      return out.join("");
+    }
+
+    // Default verdict is "correct": leaving a task untouched means the auditor
+    // accepts the model prediction as-is, so it counts as audited/correct.
+    function blankVerdict() { return { verdict: "correct", remove: [], add: [], notes: "" }; }
+
+    function render() {
+      const task = TASKS[idx];
+      const rec = task.data.record;
+      const v = verdicts[rec] || blankVerdict();
+      const predicted = predictedOf(task);
+
+      document.getElementById("diff").innerHTML = renderDiff(task.data.diff);
+      document.getElementById("pred").innerHTML = renderPred(task.data.labels, predicted);
+      document.getElementById("notes").value = v.notes || "";
+      // A record becomes audited only once you leave it (markCurrentAudited).
+      // Landing on a record that has no verdict yet shows pending, not audited.
+      document.getElementById("auditedTag").textContent =
+        verdicts[rec] ? "✓ audited" : "○ not yet audited";
+
+      document.querySelectorAll(".verdict button").forEach(b =>
+        b.classList.toggle("sel", b.dataset.v === v.verdict));
+
+      // Remove-chips: only the predicted labels can be removed.
+      const rm = document.getElementById("removeChips"); rm.innerHTML = "";
+      predicted.forEach(p => {
+        const c = document.createElement("span");
+        c.className = "chip predicted" + (v.remove.includes(p) ? " sel-rm" : "");
+        c.textContent = p;
+        c.onclick = () => { toggle(v.remove, p); persist(rec, v); render(); };
+        rm.appendChild(c);
+      });
+      if (!predicted.length) rm.innerHTML = '<span class="hint">no predicted labels</span>';
+
+      // Add-chips: any taxonomy pattern not already predicted.
+      const ad = document.getElementById("addChips"); ad.innerHTML = "";
+      PATTERNS.filter(p => !predicted.includes(p)).forEach(p => {
+        const c = document.createElement("span");
+        c.className = "chip" + (v.add.includes(p) ? " sel-add" : "");
+        c.textContent = p;
+        c.onclick = () => { toggle(v.add, p); persist(rec, v); render(); };
+        ad.appendChild(c);
+      });
+
+      const setTag = { "low-confidence": '<span class="low">⚠ low-confidence</span>',
+                       "sample": '<span style="color:#64748b">sample</span>' }[task.data.set] || "";
+      const low = " · " + setTag;
+      // A record is audited once it has a verdict entry (set when you leave it),
+      // so audited == the number of stored verdicts.
+      const audited = Object.keys(verdicts).length;
+      document.getElementById("count").innerHTML =
+        `<span id="progress">Task ${idx + 1}/${TASKS.length} · audited ${audited}/${TASKS.length}</span> · ${esc(rec)}${low}`;
+    }
+
+    function toggle(arr, val) { const j = arr.indexOf(val); if (j < 0) arr.push(val); else arr.splice(j, 1); }
+    function persist(rec, v) { verdicts[rec] = v; save(); }
+
+    function setVerdict(val) {
+      const rec = TASKS[idx].data.record;
+      const v = verdicts[rec] || blankVerdict();
+      v.verdict = val; persist(rec, v); render();
+    }
+
+    function saveNotesFromInput() {
+      const rec = TASKS[idx].data.record;
+      const v = verdicts[rec] || blankVerdict();
+      v.notes = document.getElementById("notes").value;
+      // Persist as "reviewed" only if the auditor changed something from the
+      // default (a non-correct verdict, edited labels, or notes). An untouched
+      // record stays implicitly audited/correct without a stored entry.
+      if ((v.verdict && v.verdict !== "correct") || v.remove.length || v.add.length || v.notes)
+        persist(rec, v);
+    }
+
+    function scrollTop(el) { if (el && typeof el.scrollTo === "function") el.scrollTo(0, 0); else if (el) el.scrollTop = 0; }
+
+    // Mark the current record audited on the way out: navigating away counts as
+    // having reviewed it. If the auditor never touched it, fall back to the
+    // default "correct" verdict. Records are only audited once you leave them,
+    // so simply landing on a record does not flag it as audited.
+    function markCurrentAudited() {
+      const rec = TASKS[idx].data.record;
+      if (!verdicts[rec]) persist(rec, blankVerdict());
+    }
+    function go(n) {
+      saveNotesFromInput();
+      markCurrentAudited();
+      idx = Math.max(0, Math.min(TASKS.length - 1, n));
+      render();
+      scrollTop(document.querySelector(".pane.left"));
+      scrollTop(document.querySelector(".pane.right"));
+    }
+
+    // Compact local timestamp YYYYMMDD-HHMMSS for the export filename.
+    function stamp(d) {
+      const p = n => String(n).padStart(2, "0");
+      return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+    }
+
+    function exportVerdicts() {
+      saveNotesFromInput();
+      const now = new Date();
+      const author = authorId();
+      const verdictRows = TASKS.map(t => {
+        const r = t.data.record;
+        const v = verdicts[r];
+        // A verdict entry exists once the auditor has left the record (or
+        // touched it), so it counts as audited. Records never visited have no
+        // entry and are exported as not-audited with a null verdict.
+        const audited = !!v;
+        const verdict = v
+          ? (v.verdict || ((v.remove.length || v.add.length) ? "partially-correct" : "correct"))
+          : null;
+        return {
+          record: r, upstream: t.data.upstream, fork_owner: t.data.fork_owner,
+          set: t.data.set, predicted_labels: t.data.predicted_labels, has_low_confidence: t.data.has_low,
+          audited, verdict,
+          remove_labels: v ? v.remove : [], add_labels: v ? v.add : [], notes: v ? v.notes : "",
+        };
+      });
+      const out = {
+        author,                                   // UUIDv7, stable per browser
+        exported_at: now.toISOString(),
+        total: TASKS.length,
+        audited: verdictRows.filter(r => r.audited).length,  // records left/visited
+        reviewed: Object.keys(verdicts).length,   // same set: a verdict == audited
+        verdicts: verdictRows,
+      };
+      const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `audit_verdicts_${author.slice(0, 8)}_${stamp(now)}.json`;
+      a.click();
+    }
+
+    // ---- wiring ----
+    document.querySelectorAll(".verdict button").forEach(b => b.onclick = () => setVerdict(b.dataset.v));
+    document.getElementById("notes").addEventListener("input", saveNotesFromInput);
+    document.getElementById("nextBtn").onclick = () => go(idx + 1);
+    document.getElementById("prevBtn").onclick = () => go(idx - 1);
+    document.getElementById("prevBtn2").onclick = () => go(idx - 1);
+    document.getElementById("saveNext").onclick = () => go(idx + 1);
+    document.getElementById("exportBtn").onclick = exportVerdicts;
+
+    document.addEventListener("keydown", (e) => {
+      if (e.target.tagName === "TEXTAREA") {
+        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); go(idx + 1); }
+        return;
+      }
+      if (e.key === "1") setVerdict("correct");
+      else if (e.key === "2") setVerdict("partially-correct");
+      else if (e.key === "3") setVerdict("incorrect");
+      else if (e.key === "j" || e.key === "ArrowRight") go(idx + 1);
+      else if (e.key === "k" || e.key === "ArrowLeft") go(idx - 1);
+      else if (e.key === "Enter") go(idx + 1);
+    });
+
+    if (!TASKS.length) {
+      document.getElementById("main").innerHTML =
+        '<div style="padding:40px">No tasks. Run <code>uv run python -m audit.build_ui</code> to generate tasks.js.</div>';
+    } else {
+      render();
+    }
+  </script>
+</body>
+</html>

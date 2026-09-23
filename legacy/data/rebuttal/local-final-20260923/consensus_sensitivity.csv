@@ -1,0 +1,14 @@
+family,analysis_hits,original_hits_same_1126,original_hits_all_candidates,analysis_n,candidate_n
+decision,285,274,274,1126,1220
+fix,96,95,95,1126,1220
+guardrail,21,20,20,1126,1220
+lifecycle,461,461,466,1126,1220
+personalize,38,36,36,1126,1220
+policy,269,259,259,1126,1220
+polish,45,46,46,1126,1220
+procedure,459,449,451,1126,1220
+resource,189,190,213,1126,1220
+retarget,184,178,178,1126,1220
+script,182,180,182,1126,1220
+spec,133,119,119,1126,1220
+style,6,5,5,1126,1220

@@ -1,0 +1,7 @@
+upstream,instances,positive,prevalence
+ComposioHQ/awesome-claude-skills,24,6,0.25
+affaan-m/everything-claude-code,155,66,0.4258064516129032
+anthropics/skills,204,67,0.3284313725490196
+mattpocock/skills,2,0,0.0
+obra/superpowers,694,59,0.08501440922190202
+vercel-labs/agent-skills,47,11,0.23404255319148937

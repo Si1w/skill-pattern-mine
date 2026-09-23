@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Message-Only Coding Audit</title>
+  <style>
+    :root {
+      --line: #e2e8f0; --muted: #64748b; --bg: #f8fafc;
+      --ok: #16a34a; --warn: #d97706; --bad: #dc2626; --accent: #2563eb;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, system-ui, sans-serif; color: #0f172a; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+    #bar {
+      display: flex; align-items: center; gap: 14px; padding: 8px 16px;
+      border-bottom: 1px solid var(--line); background: var(--bg); position: sticky; top: 0; z-index: 5;
+    }
+    #bar h1 { font-size: 15px; margin: 0; font-weight: 600; }
+    #bar .spacer { flex: 1; }
+    #bar button {
+      padding: 6px 12px; border: 1px solid #cbd5e1; border-radius: 6px;
+      background: #fff; cursor: pointer; font-size: 13px;
+    }
+    #bar button:hover { background: #eef2f7; }
+    #count { font-size: 13px; color: var(--muted); }
+    #progress { font-variant-numeric: tabular-nums; }
+
+    #main { display: grid; grid-template-columns: 1fr 1fr; gap: 0; height: calc(100vh - 49px); }
+    .pane { overflow: auto; padding: 16px 20px; }
+    .pane.left { border-right: 1px solid var(--line); }
+    .pane h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 10px; }
+
+    .commitmsg { background: #f1f5f9; border-left: 3px solid #cbd5e1; padding: 8px 10px; border-radius: 4px; margin: 6px 0; white-space: pre-wrap; font-size: 12.5px; }
+    .empty-patch { color: var(--warn); font-style: italic; font-size: 12.5px; }
+
+    .axis { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 8px 0; }
+    .axis .axisname { font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); margin-bottom: 6px; }
+    .axis .row { font-size: 12.5px; margin: 3px 0; }
+    .axis .row b { color: #334155; }
+    .tag { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px; background: #eef2f7; color: #334155; margin: 1px 3px 1px 0; }
+    .tag.gt { background: #dcfce7; color: var(--ok); }
+    .axis ul { margin: 4px 0 0; padding-left: 18px; font-size: 12.5px; color: #334155; }
+    .evidence { background: var(--bg); border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-top: 10px; }
+
+    /* Audit form lives in the right pane, below the prediction. */
+    #form { margin-top: 18px; border-top: 2px solid var(--line); padding-top: 14px; }
+    #form h2 { color: #0f172a; }
+    .q { margin: 12px 0; }
+    .q > label.qlabel { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+    .verdict button { margin-right: 6px; padding: 6px 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; cursor: pointer; font-size: 13px; }
+    .verdict button.sel[data-v="correct"] { background: #dcfce7; border-color: var(--ok); }
+    .verdict button.sel[data-v="partially-correct"] { background: #fef3c7; border-color: var(--warn); }
+    .verdict button.sel[data-v="incorrect"] { background: #fee2e2; border-color: var(--bad); }
+    textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px; font: inherit; font-size: 13px; resize: vertical; }
+    .nav { display: flex; gap: 8px; margin-top: 14px; }
+    .nav button { flex: 1; padding: 9px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; cursor: pointer; font-size: 13px; font-weight: 600; }
+    .nav button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .hint { font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+    .auditedTag { font-size: 11px; color: var(--ok); font-weight: 600; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 5px; max-height: 150px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+    .chip { font-size: 11.5px; padding: 3px 9px; border: 1px solid #cbd5e1; border-radius: 999px; cursor: pointer; background: #fff; user-select: none; }
+    .chip.sel-rm { background: #fee2e2; border-color: var(--bad); color: var(--bad); }
+    .chip.sel-add { background: #dcfce7; border-color: var(--ok); color: var(--ok); }
+    .chip.predicted { outline: 2px solid #bfdbfe; }
+    .sub { font-size: 12px; font-weight: 600; color: #334155; margin: 10px 0 4px; }
+  </style>
+</head>
+<body>
+  <div id="bar">
+    <h1>Message-Only Coding Audit</h1>
+    <span id="count"></span>
+    <span class="spacer"></span>
+    <button id="prevBtn">← Prev (k)</button>
+    <button id="nextBtn">Next (j) →</button>
+    <button id="exportBtn">Export verdicts (JSON)</button>
+  </div>
+
+  <div id="main">
+    <div class="pane left">
+      <h2>Commit messages (message-only — no diff)</h2>
+      <div id="messages"></div>
+    </div>
+    <div class="pane right">
+      <h2>Model coding <span id="auditedTag" class="auditedTag"></span></h2>
+      <div id="pred"></div>
+
+      <div id="form">
+        <h2>Audit</h2>
+        <div class="q verdict" data-axis="what">
+          <label class="qlabel">1. Is the WHAT coding correct overall?</label>
+          <button data-v="correct">Correct (1)</button>
+          <button data-v="partially-correct">Partial (2)</button>
+          <button data-v="incorrect">Incorrect (3)</button>
+        </div>
+        <div class="q">
+          <div class="sub">pred_labels to REMOVE</div>
+          <div class="chips" id="rmPatterns"></div>
+          <div class="sub">pred_labels to ADD</div>
+          <div class="chips" id="addPatterns"></div>
+        </div>
+        <div class="q">
+          <div class="sub">what_expression to REMOVE</div>
+          <div class="chips" id="rmWhat"></div>
+          <div class="sub">what_expression to ADD</div>
+          <div class="chips" id="addWhat"></div>
+        </div>
+
+        <div class="q verdict" data-axis="why">
+          <label class="qlabel">2. Is the WHY coding correct overall?</label>
+          <button data-v="correct">Correct (q)</button>
+          <button data-v="partially-correct">Partial (w)</button>
+          <button data-v="incorrect">Incorrect (e)</button>
+        </div>
+        <div class="q">
+          <div class="sub">why_expression to REMOVE</div>
+          <div class="chips" id="rmWhy"></div>
+          <div class="sub">why_expression to ADD</div>
+          <div class="chips" id="addWhy"></div>
+        </div>
+
+        <div class="q">
+          <label class="qlabel">3. Notes</label>
+          <textarea id="notes" rows="3" placeholder="Optional auditor notes / corrected why_intentions / reasoning"></textarea>
+        </div>
+        <div class="nav">
+          <button id="prevBtn2">← Prev</button>
+          <button id="saveNext" class="primary">Save &amp; Next (Enter)</button>
+        </div>
+        <div class="hint">Shortcuts: 1/2/3 What verdict · q/w/e Why verdict · j/k or ←/→ navigate · Enter save &amp; next · blue outline = predicted. Progress auto-saves to this browser.</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./tasks.js"></script>
+  <script>
+    // tasks.js ships { order: [...record ids], records: {id: task} } for IDE
+    // readability; flatten back to an ordered array for traversal here.
+    const SRC = window.MSG_TASKS || { order: [], records: {}, vocabs: {} };
+    const TASKS = SRC.order.map(id => SRC.records[id]);
+    const VOCABS = SRC.vocabs || { patterns: [], what: [], why: [] };
+    const STORE_KEY = "msg_audit_verdicts_v1";
+    const AUTHOR_KEY = "msg_audit_author_id_v1";
+
+    // Three audited groups, each with its own vocabulary, predicted set, and a
+    // pair of chip containers (remove the predicted, add from the rest).
+    const GROUPS = [
+      { key: "patterns", vocab: VOCABS.patterns, rm: "rmPatterns", add: "addPatterns" },
+      { key: "what",     vocab: VOCABS.what,     rm: "rmWhat",     add: "addWhat" },
+      { key: "why",      vocab: VOCABS.why,      rm: "rmWhy",      add: "addWhy" },
+    ];
+
+    let idx = 0;
+    const verdicts = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
+
+    // UUIDv7: 48-bit millisecond timestamp + random, so ids sort by creation
+    // time and distinct browsers/auditors get distinct ids. Generated once per
+    // browser and reused for every export, identifying the auditor.
+    function uuidv7(nowMs) {
+      const ts = BigInt(nowMs);
+      const bytes = new Uint8Array(16);
+      for (let i = 0; i < 6; i++) bytes[i] = Number((ts >> BigInt(40 - 8 * i)) & 0xffn);
+      crypto.getRandomValues(bytes.subarray(6));
+      bytes[6] = (bytes[6] & 0x0f) | 0x70;          // version 7
+      bytes[8] = (bytes[8] & 0x3f) | 0x80;          // variant
+      const hex = [...bytes].map(b => b.toString(16).padStart(2, "0")).join("");
+      return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+    }
+    function authorId() {
+      let id = localStorage.getItem(AUTHOR_KEY);
+      if (!id) { id = uuidv7(Date.now()); localStorage.setItem(AUTHOR_KEY, id); }
+      return id;
+    }
+
+    function save() { localStorage.setItem(STORE_KEY, JSON.stringify(verdicts)); }
+    function esc(s) { return (s || "").replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+
+    // Render the message-only markdown blob into plain commit-message blocks.
+    function renderMessages(md) {
+      const out = [];
+      const lines = md.split("\n");
+      let i = 0;
+      while (i < lines.length) {
+        const ln = lines[i];
+        if (ln.startsWith("## Commit messages")) { i++; continue; }
+        if (ln.startsWith("_(no commit")) { out.push(`<div class="empty-patch">${esc(ln.replace(/_/g, ""))}</div>`); i++; continue; }
+        if (ln.startsWith("```")) {
+          const buf = []; i++;
+          while (i < lines.length && !lines[i].startsWith("```")) { buf.push(lines[i]); i++; }
+          i++;
+          out.push(`<div class="commitmsg">${esc(buf.join("\n"))}</div>`); continue;
+        }
+        i++;
+      }
+      return out.join("");
+    }
+
+    // Render a single `**bold:** value` line, turning `code` spans into tags.
+    function renderKvLine(ln, gt) {
+      const m = ln.match(/^\*\*([^:]+):\*\*\s*(.*)$/);
+      if (!m) return `<div class="row">${esc(ln)}</div>`;
+      const key = m[1], rest = m[2];
+      const cls = gt ? "tag gt" : "tag";
+      const html = rest
+        .replace(/`([^`]+)`/g, (_, c) => `<span class="${cls}">${esc(c)}</span>`)
+        .replace(/_\(none\)_/g, '<span class="empty-patch">(none)</span>');
+      return `<div class="row"><b>${esc(key)}:</b> ${html}</div>`;
+    }
+
+    // Render the What/Why coding markdown blob into HTML cards.
+    function renderPred(md) {
+      const out = [];
+      const lines = md.split("\n");
+      let i = 0, openAxis = false;
+      const closeAxis = () => { if (openAxis) { out.push("</div>"); openAxis = false; } };
+      while (i < lines.length) {
+        const ln = lines[i];
+        if (ln.startsWith("## ")) {
+          closeAxis();
+          const title = ln.slice(3);
+          out.push(`<div class="axis"><div class="axisname">${esc(title)}</div>`);
+          openAxis = true; i++; continue;
+        }
+        if (ln.startsWith("**")) {
+          out.push(renderKvLine(ln, false)); i++; continue;
+        }
+        if (ln.startsWith("- ")) {
+          out.push(`<ul><li>${esc(ln.slice(2))}</li></ul>`); i++; continue;
+        }
+        if (ln.trim()) { out.push(`<div class="row">${esc(ln)}</div>`); }
+        i++;
+      }
+      closeAxis();
+      return out.join("");
+    }
+
+    // Default verdict accepts both axes as correct with no label edits: an
+    // untouched task means the auditor accepts the model coding as-is. Each
+    // group carries its own remove/add lists.
+    function blankVerdict() {
+      return {
+        what: "correct", why: "correct", notes: "",
+        remove: { patterns: [], what: [], why: [] },
+        add: { patterns: [], what: [], why: [] },
+      };
+    }
+
+    // True when the auditor changed anything from the accept-as-is default.
+    function isTouched(v) {
+      if (v.what !== "correct" || v.why !== "correct" || v.notes) return true;
+      return GROUPS.some(g => v.remove[g.key].length || v.add[g.key].length);
+    }
+
+    function toggle(arr, val) { const j = arr.indexOf(val); if (j < 0) arr.push(val); else arr.splice(j, 1); }
+
+    // Render one group's remove chips (the predicted labels) and add chips (the
+    // rest of the vocabulary) into their two containers.
+    function renderChips(g, v, predicted) {
+      const rm = document.getElementById(g.rm); rm.innerHTML = "";
+      predicted.forEach(p => {
+        const c = document.createElement("span");
+        c.className = "chip predicted" + (v.remove[g.key].includes(p) ? " sel-rm" : "");
+        c.textContent = p;
+        c.onclick = () => { toggle(v.remove[g.key], p); persist(rec_(), v); render(); };
+        rm.appendChild(c);
+      });
+      if (!predicted.length) rm.innerHTML = '<span class="hint">none predicted</span>';
+
+      const ad = document.getElementById(g.add); ad.innerHTML = "";
+      g.vocab.filter(p => !predicted.includes(p)).forEach(p => {
+        const c = document.createElement("span");
+        c.className = "chip" + (v.add[g.key].includes(p) ? " sel-add" : "");
+        c.textContent = p;
+        c.onclick = () => { toggle(v.add[g.key], p); persist(rec_(), v); render(); };
+        ad.appendChild(c);
+      });
+    }
+
+    function rec_() { return TASKS[idx].data.record; }
+
+    function render() {
+      const task = TASKS[idx];
+      const rec = task.data.record;
+      const v = verdicts[rec] || blankVerdict();
+
+      document.getElementById("messages").innerHTML = renderMessages(task.data.messages);
+      document.getElementById("pred").innerHTML = renderPred(task.data.pred);
+      document.getElementById("notes").value = v.notes || "";
+      document.getElementById("auditedTag").textContent =
+        verdicts[rec] ? "✓ audited" : "○ not yet audited";
+
+      document.querySelectorAll('.verdict[data-axis="what"] button').forEach(b =>
+        b.classList.toggle("sel", b.dataset.v === v.what));
+      document.querySelectorAll('.verdict[data-axis="why"] button').forEach(b =>
+        b.classList.toggle("sel", b.dataset.v === v.why));
+
+      GROUPS.forEach(g => renderChips(g, v, task.data.predicted[g.key] || []));
+
+      const audited = Object.keys(verdicts).length;
+      document.getElementById("count").innerHTML =
+        `<span id="progress">Task ${idx + 1}/${TASKS.length} · audited ${audited}/${TASKS.length}</span> · ${esc(rec)}`;
+    }
+
+    function persist(rec, v) { verdicts[rec] = v; save(); }
+
+    function setVerdict(axis, val) {
+      const rec = TASKS[idx].data.record;
+      const v = verdicts[rec] || blankVerdict();
+      v[axis] = val; persist(rec, v); render();
+    }
+
+    function saveNotesFromInput() {
+      const rec = TASKS[idx].data.record;
+      const v = verdicts[rec] || blankVerdict();
+      v.notes = document.getElementById("notes").value;
+      // Persist as reviewed only if the auditor changed something from the
+      // accept-as-is default (verdict, label edits, or notes).
+      if (isTouched(v)) persist(rec, v);
+    }
+
+    function scrollTop(el) { if (el && typeof el.scrollTo === "function") el.scrollTo(0, 0); else if (el) el.scrollTop = 0; }
+
+    // Mark the current record audited on the way out: navigating away counts as
+    // having reviewed it. Records are only audited once you leave them.
+    function markCurrentAudited() {
+      const rec = TASKS[idx].data.record;
+      if (!verdicts[rec]) persist(rec, blankVerdict());
+    }
+    function go(n) {
+      saveNotesFromInput();
+      markCurrentAudited();
+      idx = Math.max(0, Math.min(TASKS.length - 1, n));
+      render();
+      scrollTop(document.querySelector(".pane.left"));
+      scrollTop(document.querySelector(".pane.right"));
+    }
+
+    // Compact local timestamp YYYYMMDD-HHMMSS for the export filename.
+    function stamp(d) {
+      const p = n => String(n).padStart(2, "0");
+      return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+    }
+
+    function exportVerdicts() {
+      saveNotesFromInput();
+      const now = new Date();
+      const author = authorId();
+      const verdictRows = TASKS.map(t => {
+        const r = t.data.record;
+        const v = verdicts[r];
+        const audited = !!v;
+        const blank = blankVerdict();
+        const rem = v ? v.remove : blank.remove;
+        const add = v ? v.add : blank.add;
+        return {
+          record: r, predicted_labels: t.data.pred_labels,
+          audited,
+          what_verdict: v ? v.what : null,
+          why_verdict: v ? v.why : null,
+          remove_pred_labels: rem.patterns, add_pred_labels: add.patterns,
+          remove_what_expression: rem.what, add_what_expression: add.what,
+          remove_why_expression: rem.why, add_why_expression: add.why,
+          notes: v ? v.notes : "",
+        };
+      });
+      const out = {
+        author,                                   // UUIDv7, stable per browser
+        exported_at: now.toISOString(),
+        total: TASKS.length,
+        audited: verdictRows.filter(r => r.audited).length,
+        verdicts: verdictRows,
+      };
+      const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `msg_audit_verdicts_${author.slice(0, 8)}_${stamp(now)}.json`;
+      a.click();
+    }
+
+    // ---- wiring ----
+    document.querySelectorAll('.verdict[data-axis="what"] button').forEach(b =>
+      b.onclick = () => setVerdict("what", b.dataset.v));
+    document.querySelectorAll('.verdict[data-axis="why"] button').forEach(b =>
+      b.onclick = () => setVerdict("why", b.dataset.v));
+    document.getElementById("notes").addEventListener("input", saveNotesFromInput);
+    document.getElementById("nextBtn").onclick = () => go(idx + 1);
+    document.getElementById("prevBtn").onclick = () => go(idx - 1);
+    document.getElementById("prevBtn2").onclick = () => go(idx - 1);
+    document.getElementById("saveNext").onclick = () => go(idx + 1);
+    document.getElementById("exportBtn").onclick = exportVerdicts;
+
+    document.addEventListener("keydown", (e) => {
+      if (e.target.tagName === "TEXTAREA") {
+        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); go(idx + 1); }
+        return;
+      }
+      if (e.key === "1") setVerdict("what", "correct");
+      else if (e.key === "2") setVerdict("what", "partially-correct");
+      else if (e.key === "3") setVerdict("what", "incorrect");
+      else if (e.key === "q") setVerdict("why", "correct");
+      else if (e.key === "w") setVerdict("why", "partially-correct");
+      else if (e.key === "e") setVerdict("why", "incorrect");
+      else if (e.key === "j" || e.key === "ArrowRight") go(idx + 1);
+      else if (e.key === "k" || e.key === "ArrowLeft") go(idx - 1);
+      else if (e.key === "Enter") go(idx + 1);
+    });
+
+    if (!TASKS.length) {
+      document.getElementById("main").innerHTML =
+        '<div style="padding:40px">No tasks. Run <code>uv run python -m msg.build_msg</code> to generate tasks.js.</div>';
+    } else {
+      render();
+    }
+  </script>
+</body>
+</html>

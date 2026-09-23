@@ -1,0 +1,193 @@
+group,surface,count,n,prevalence
+all,SKILL.md,898,1126,0.7975133214920072
+all,README.md,22,1126,0.019538188277087035
+all,LICENSE.txt,9,1126,0.007992895204262877
+all,AGENTS.md,19,1126,0.016873889875666074
+all,agents/,21,1126,0.018650088809946713
+all,scripts,262,1126,0.23268206039076378
+all,references,169,1126,0.15008880994671403
+all,assets,25,1126,0.022202486678507993
+all,configuration,50,1126,0.04440497335701599
+all,examples,95,1126,0.08436944937833037
+all,additional files,461,1126,0.40941385435168737
+all,additional directories,30,1126,0.02664298401420959
+repository:ComposioHQ/awesome-claude-skills,SKILL.md,11,24,0.4583333333333333
+repository:ComposioHQ/awesome-claude-skills,README.md,1,24,0.041666666666666664
+repository:ComposioHQ/awesome-claude-skills,LICENSE.txt,0,24,0.0
+repository:ComposioHQ/awesome-claude-skills,AGENTS.md,0,24,0.0
+repository:ComposioHQ/awesome-claude-skills,agents/,0,24,0.0
+repository:ComposioHQ/awesome-claude-skills,scripts,9,24,0.375
+repository:ComposioHQ/awesome-claude-skills,references,1,24,0.041666666666666664
+repository:ComposioHQ/awesome-claude-skills,assets,1,24,0.041666666666666664
+repository:ComposioHQ/awesome-claude-skills,configuration,2,24,0.08333333333333333
+repository:ComposioHQ/awesome-claude-skills,examples,1,24,0.041666666666666664
+repository:ComposioHQ/awesome-claude-skills,additional files,6,24,0.25
+repository:ComposioHQ/awesome-claude-skills,additional directories,0,24,0.0
+exclude:ComposioHQ/awesome-claude-skills,SKILL.md,887,1102,0.8049001814882033
+exclude:ComposioHQ/awesome-claude-skills,README.md,21,1102,0.019056261343012703
+exclude:ComposioHQ/awesome-claude-skills,LICENSE.txt,9,1102,0.008166969147005444
+exclude:ComposioHQ/awesome-claude-skills,AGENTS.md,19,1102,0.017241379310344827
+exclude:ComposioHQ/awesome-claude-skills,agents/,21,1102,0.019056261343012703
+exclude:ComposioHQ/awesome-claude-skills,scripts,253,1102,0.2295825771324864
+exclude:ComposioHQ/awesome-claude-skills,references,168,1102,0.15245009074410162
+exclude:ComposioHQ/awesome-claude-skills,assets,24,1102,0.021778584392014518
+exclude:ComposioHQ/awesome-claude-skills,configuration,48,1102,0.043557168784029036
+exclude:ComposioHQ/awesome-claude-skills,examples,94,1102,0.0852994555353902
+exclude:ComposioHQ/awesome-claude-skills,additional files,455,1102,0.4128856624319419
+exclude:ComposioHQ/awesome-claude-skills,additional directories,30,1102,0.02722323049001815
+repository:affaan-m/everything-claude-code,SKILL.md,110,155,0.7096774193548387
+repository:affaan-m/everything-claude-code,README.md,1,155,0.0064516129032258064
+repository:affaan-m/everything-claude-code,LICENSE.txt,0,155,0.0
+repository:affaan-m/everything-claude-code,AGENTS.md,0,155,0.0
+repository:affaan-m/everything-claude-code,agents/,11,155,0.07096774193548387
+repository:affaan-m/everything-claude-code,scripts,54,155,0.34838709677419355
+repository:affaan-m/everything-claude-code,references,2,155,0.012903225806451613
+repository:affaan-m/everything-claude-code,assets,0,155,0.0
+repository:affaan-m/everything-claude-code,configuration,23,155,0.14838709677419354
+repository:affaan-m/everything-claude-code,examples,1,155,0.0064516129032258064
+repository:affaan-m/everything-claude-code,additional files,17,155,0.10967741935483871
+repository:affaan-m/everything-claude-code,additional directories,2,155,0.012903225806451613
+exclude:affaan-m/everything-claude-code,SKILL.md,788,971,0.811534500514933
+exclude:affaan-m/everything-claude-code,README.md,21,971,0.021627188465499485
+exclude:affaan-m/everything-claude-code,LICENSE.txt,9,971,0.009268795056642637
+exclude:affaan-m/everything-claude-code,AGENTS.md,19,971,0.01956745623069001
+exclude:affaan-m/everything-claude-code,agents/,10,971,0.010298661174047374
+exclude:affaan-m/everything-claude-code,scripts,208,971,0.21421215242018538
+exclude:affaan-m/everything-claude-code,references,167,971,0.17198764160659114
+exclude:affaan-m/everything-claude-code,assets,25,971,0.025746652935118436
+exclude:affaan-m/everything-claude-code,configuration,27,971,0.027806385169927908
+exclude:affaan-m/everything-claude-code,examples,94,971,0.09680741503604531
+exclude:affaan-m/everything-claude-code,additional files,444,971,0.4572605561277034
+exclude:affaan-m/everything-claude-code,additional directories,28,971,0.028836251287332648
+repository:anthropics/skills,SKILL.md,114,204,0.5588235294117647
+repository:anthropics/skills,README.md,8,204,0.0392156862745098
+repository:anthropics/skills,LICENSE.txt,9,204,0.04411764705882353
+repository:anthropics/skills,AGENTS.md,0,204,0.0
+repository:anthropics/skills,agents/,9,204,0.04411764705882353
+repository:anthropics/skills,scripts,101,204,0.4950980392156863
+repository:anthropics/skills,references,42,204,0.20588235294117646
+repository:anthropics/skills,assets,22,204,0.10784313725490197
+repository:anthropics/skills,configuration,14,204,0.06862745098039216
+repository:anthropics/skills,examples,18,204,0.08823529411764706
+repository:anthropics/skills,additional files,60,204,0.29411764705882354
+repository:anthropics/skills,additional directories,16,204,0.0784313725490196
+exclude:anthropics/skills,SKILL.md,784,922,0.8503253796095445
+exclude:anthropics/skills,README.md,14,922,0.015184381778741865
+exclude:anthropics/skills,LICENSE.txt,0,922,0.0
+exclude:anthropics/skills,AGENTS.md,19,922,0.020607375271149676
+exclude:anthropics/skills,agents/,12,922,0.013015184381778741
+exclude:anthropics/skills,scripts,161,922,0.17462039045553146
+exclude:anthropics/skills,references,127,922,0.13774403470715835
+exclude:anthropics/skills,assets,3,922,0.0032537960954446853
+exclude:anthropics/skills,configuration,36,922,0.039045553145336226
+exclude:anthropics/skills,examples,77,922,0.08351409978308026
+exclude:anthropics/skills,additional files,401,922,0.4349240780911063
+exclude:anthropics/skills,additional directories,14,922,0.015184381778741865
+repository:mattpocock/skills,SKILL.md,2,2,1.0
+repository:mattpocock/skills,README.md,0,2,0.0
+repository:mattpocock/skills,LICENSE.txt,0,2,0.0
+repository:mattpocock/skills,AGENTS.md,0,2,0.0
+repository:mattpocock/skills,agents/,0,2,0.0
+repository:mattpocock/skills,scripts,0,2,0.0
+repository:mattpocock/skills,references,0,2,0.0
+repository:mattpocock/skills,assets,0,2,0.0
+repository:mattpocock/skills,configuration,0,2,0.0
+repository:mattpocock/skills,examples,0,2,0.0
+repository:mattpocock/skills,additional files,0,2,0.0
+repository:mattpocock/skills,additional directories,0,2,0.0
+exclude:mattpocock/skills,SKILL.md,896,1124,0.797153024911032
+exclude:mattpocock/skills,README.md,22,1124,0.019572953736654804
+exclude:mattpocock/skills,LICENSE.txt,9,1124,0.00800711743772242
+exclude:mattpocock/skills,AGENTS.md,19,1124,0.016903914590747332
+exclude:mattpocock/skills,agents/,21,1124,0.018683274021352312
+exclude:mattpocock/skills,scripts,262,1124,0.23309608540925267
+exclude:mattpocock/skills,references,169,1124,0.15035587188612098
+exclude:mattpocock/skills,assets,25,1124,0.02224199288256228
+exclude:mattpocock/skills,configuration,50,1124,0.04448398576512456
+exclude:mattpocock/skills,examples,95,1124,0.08451957295373666
+exclude:mattpocock/skills,additional files,461,1124,0.4101423487544484
+exclude:mattpocock/skills,additional directories,30,1124,0.026690391459074734
+repository:obra/superpowers,SKILL.md,636,694,0.9164265129682997
+repository:obra/superpowers,README.md,3,694,0.004322766570605188
+repository:obra/superpowers,LICENSE.txt,0,694,0.0
+repository:obra/superpowers,AGENTS.md,0,694,0.0
+repository:obra/superpowers,agents/,1,694,0.001440922190201729
+repository:obra/superpowers,scripts,96,694,0.138328530259366
+repository:obra/superpowers,references,112,694,0.16138328530259366
+repository:obra/superpowers,assets,2,694,0.002881844380403458
+repository:obra/superpowers,configuration,4,694,0.005763688760806916
+repository:obra/superpowers,examples,75,694,0.10806916426512968
+repository:obra/superpowers,additional files,352,694,0.5072046109510087
+repository:obra/superpowers,additional directories,12,694,0.01729106628242075
+exclude:obra/superpowers,SKILL.md,262,432,0.6064814814814815
+exclude:obra/superpowers,README.md,19,432,0.04398148148148148
+exclude:obra/superpowers,LICENSE.txt,9,432,0.020833333333333332
+exclude:obra/superpowers,AGENTS.md,19,432,0.04398148148148148
+exclude:obra/superpowers,agents/,20,432,0.046296296296296294
+exclude:obra/superpowers,scripts,166,432,0.38425925925925924
+exclude:obra/superpowers,references,57,432,0.13194444444444445
+exclude:obra/superpowers,assets,23,432,0.05324074074074074
+exclude:obra/superpowers,configuration,46,432,0.10648148148148148
+exclude:obra/superpowers,examples,20,432,0.046296296296296294
+exclude:obra/superpowers,additional files,109,432,0.2523148148148148
+exclude:obra/superpowers,additional directories,18,432,0.041666666666666664
+repository:vercel-labs/agent-skills,SKILL.md,25,47,0.5319148936170213
+repository:vercel-labs/agent-skills,README.md,9,47,0.19148936170212766
+repository:vercel-labs/agent-skills,LICENSE.txt,0,47,0.0
+repository:vercel-labs/agent-skills,AGENTS.md,19,47,0.40425531914893614
+repository:vercel-labs/agent-skills,agents/,0,47,0.0
+repository:vercel-labs/agent-skills,scripts,2,47,0.0425531914893617
+repository:vercel-labs/agent-skills,references,12,47,0.2553191489361702
+repository:vercel-labs/agent-skills,assets,0,47,0.0
+repository:vercel-labs/agent-skills,configuration,7,47,0.14893617021276595
+repository:vercel-labs/agent-skills,examples,0,47,0.0
+repository:vercel-labs/agent-skills,additional files,26,47,0.5531914893617021
+repository:vercel-labs/agent-skills,additional directories,0,47,0.0
+exclude:vercel-labs/agent-skills,SKILL.md,873,1079,0.809082483781279
+exclude:vercel-labs/agent-skills,README.md,13,1079,0.012048192771084338
+exclude:vercel-labs/agent-skills,LICENSE.txt,9,1079,0.008341056533827619
+exclude:vercel-labs/agent-skills,AGENTS.md,0,1079,0.0
+exclude:vercel-labs/agent-skills,agents/,21,1079,0.019462465245597776
+exclude:vercel-labs/agent-skills,scripts,260,1079,0.24096385542168675
+exclude:vercel-labs/agent-skills,references,157,1079,0.14550509731232622
+exclude:vercel-labs/agent-skills,assets,25,1079,0.023169601482854494
+exclude:vercel-labs/agent-skills,configuration,43,1079,0.03985171455050973
+exclude:vercel-labs/agent-skills,examples,95,1079,0.08804448563484708
+exclude:vercel-labs/agent-skills,additional files,435,1079,0.4031510658016682
+exclude:vercel-labs/agent-skills,additional directories,30,1079,0.027803521779425393
+single_skill,SKILL.md,295,460,0.6413043478260869
+single_skill,README.md,16,460,0.034782608695652174
+single_skill,LICENSE.txt,2,460,0.004347826086956522
+single_skill,AGENTS.md,15,460,0.03260869565217391
+single_skill,agents/,7,460,0.015217391304347827
+single_skill,scripts,132,460,0.28695652173913044
+single_skill,references,44,460,0.09565217391304348
+single_skill,assets,7,460,0.015217391304347827
+single_skill,configuration,23,460,0.05
+single_skill,examples,6,460,0.013043478260869565
+single_skill,additional files,98,460,0.21304347826086956
+single_skill,additional directories,7,460,0.015217391304347827
+single_retained_commit,SKILL.md,305,423,0.7210401891252955
+single_retained_commit,README.md,9,423,0.02127659574468085
+single_retained_commit,LICENSE.txt,2,423,0.004728132387706856
+single_retained_commit,AGENTS.md,7,423,0.016548463356973995
+single_retained_commit,agents/,3,423,0.0070921985815602835
+single_retained_commit,scripts,101,423,0.23877068557919623
+single_retained_commit,references,46,423,0.10874704491725769
+single_retained_commit,assets,7,423,0.016548463356973995
+single_retained_commit,configuration,11,423,0.026004728132387706
+single_retained_commit,examples,24,423,0.05673758865248227
+single_retained_commit,additional files,126,423,0.2978723404255319
+single_retained_commit,additional directories,5,423,0.01182033096926714
+single_skill_and_retained_commit,SKILL.md,157,253,0.6205533596837944
+single_skill_and_retained_commit,README.md,7,253,0.02766798418972332
+single_skill_and_retained_commit,LICENSE.txt,0,253,0.0
+single_skill_and_retained_commit,AGENTS.md,6,253,0.023715415019762844
+single_skill_and_retained_commit,agents/,1,253,0.003952569169960474
+single_skill_and_retained_commit,scripts,77,253,0.30434782608695654
+single_skill_and_retained_commit,references,16,253,0.06324110671936758
+single_skill_and_retained_commit,assets,1,253,0.003952569169960474
+single_skill_and_retained_commit,configuration,8,253,0.03162055335968379
+single_skill_and_retained_commit,examples,3,253,0.011857707509881422
+single_skill_and_retained_commit,additional files,44,253,0.17391304347826086
+single_skill_and_retained_commit,additional directories,2,253,0.007905138339920948

@@ -1,0 +1,14 @@
+family,prevalence,lower_95,upper_95,repetitions,scope
+decision,0.2531083481349911,0.22486706529090933,0.2821220591660843,2000,fixed repositories; fork clusters; does not address shared skills
+fix,0.0852575488454707,0.06683463595228302,0.10386405012758552,2000,fixed repositories; fork clusters; does not address shared skills
+guardrail,0.018650088809946713,0.011284477540474125,0.026857790193775415,2000,fixed repositories; fork clusters; does not address shared skills
+lifecycle,0.40941385435168737,0.37719278070982426,0.4422035860113099,2000,fixed repositories; fork clusters; does not address shared skills
+personalize,0.03374777975133215,0.02359985535388761,0.04461960185304706,2000,fixed repositories; fork clusters; does not address shared skills
+policy,0.238898756660746,0.21034058061741634,0.2672645739910314,2000,fixed repositories; fork clusters; does not address shared skills
+polish,0.03996447602131439,0.027335657463298305,0.052909087353714544,2000,fixed repositories; fork clusters; does not address shared skills
+procedure,0.40763765541740676,0.37753864967691286,0.4393821715154661,2000,fixed repositories; fork clusters; does not address shared skills
+resource,0.16785079928952043,0.1452825841595137,0.1928465690589816,2000,fixed repositories; fork clusters; does not address shared skills
+retarget,0.16341030195381884,0.14003196814260335,0.1883703059250075,2000,fixed repositories; fork clusters; does not address shared skills
+script,0.16163410301953818,0.134769946209554,0.19027279805537614,2000,fixed repositories; fork clusters; does not address shared skills
+spec,0.11811722912966252,0.09697508896797152,0.14044481743227327,2000,fixed repositories; fork clusters; does not address shared skills
+style,0.0053285968028419185,0.0017331022530329288,0.009973254348021206,2000,fixed repositories; fork clusters; does not address shared skills

@@ -1,0 +1,9 @@
+{
+  "rule_matches": 1562,
+  "matches_with_baseline_file": 767,
+  "matches_with_same_rule_already_in_file": 496,
+  "instances_with_same_rule_already_in_file": 91,
+  "unavailable_matches_added_files": 795,
+  "unavailable_matches_other_files": 0,
+  "limitation": "matched file context only; does not establish new risk, same semantic instruction, or paired full-package prevalence"
+}

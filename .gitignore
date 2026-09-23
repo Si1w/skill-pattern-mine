@@ -1,11 +1,10 @@
 # Python
 __pycache__/
-.pytest_cache/
+.ruff_cache/
 
 # Environment
 .env
 .venv/
-uv.lock
 
 # HPC
 *.out
@@ -16,15 +15,16 @@ uv.lock
 .DS_Store
 
 # Benchmark run results
-data/analysis/
-data/audit/
-data/label/
-data/mine/
-data/msg/
-
-eval/tables-and-figures/
+data/
 
 # Overleaf paper submodule checkout
 paper/
 
 # Repository
+legacy/src/audit/tasks.js
+legacy/src/msg/tasks.js
+
+# Independent ratings stay private until adjudication.
+legacy/annotation/blind-*.json
+legacy/annotation/security-*.json
+legacy/annotation/ratings/

@@ -1,0 +1,11 @@
+rule,matches,distinct_lines,instances,human_precision
+CMD001,127,127,28,
+CMD002,41,41,22,
+DEP001,152,152,40,
+DEP002,6,6,6,
+FILE001,867,867,149,
+FILE002,8,8,5,
+INJ001,11,11,9,
+INJ002,58,58,27,
+NET001,283,283,66,
+NET002,9,9,8,

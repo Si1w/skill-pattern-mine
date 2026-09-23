@@ -1,0 +1,10 @@
+{
+  "retrieved_at": "2026-09-23T11:39:16.749394+00:00",
+  "instances": 1126,
+  "repositories_succeeded": 6,
+  "with_branch_pr_evidence": 296,
+  "with_exact_head_pr": 263,
+  "with_branch_merge_evidence": 23,
+  "with_exact_head_merge_evidence": 20,
+  "inference": "branch-name associations are candidates; exact-head matches are stronger evidence; missing evidence is unresolved"
+}

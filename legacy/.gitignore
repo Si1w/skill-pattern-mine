@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+.pytest_cache/
+
+# Environment
+.env
+.venv/
+
+# HPC
+*.out
+*.log
+*.err
+
+# OS
+.DS_Store
+
+# Benchmark run results
+data/analysis/
+data/audit/
+data/label/
+data/mine/
+data/msg/
+
+eval/tables-and-figures/
+
+# Overleaf paper submodule checkout
+paper/
+
+# Repository
+src/audit/tasks.js
+src/msg/tasks.js
+annotation/blind-*.json
+annotation/security-*.json
+annotation/ratings/

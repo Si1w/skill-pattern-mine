@@ -1,0 +1,164 @@
+# Commit-message coding patterns for the representative audit set.
+# This codebook is used alongside the patch-derived skill modification labels.
+# Follow the work What Makes a Good Commit Message?
+# https://arxiv.org/pdf/2202.02974
+
+fields:
+  message_what_labels:
+    type: "multi_label"
+    source: "skill_modification_taxonomy"
+    level: "pattern"
+    required: true
+    description: "All skill-modification pattern labels that can be inferred from the commit messages alone."
+    coding_rule: "Assign every skill-modification pattern that the commit messages state or strongly imply. Do not use patch evidence to add labels that are absent from the messages."
+    missing_value: "missing-what"
+
+  message_what_families:
+    type: "multi_label"
+    source: "skill_modification_taxonomy"
+    level: "family"
+    required: true
+    description: "The taxonomy families corresponding to message_what_labels."
+    missing_value: "missing-what"
+
+  what_expression_categories:
+    type: "multi_label"
+    source: "commit_message_quality_taxonomy"
+    required: true
+    description: "All ways the commit messages express what changed in the skill modification."
+    allowed:
+      - label: "summarize-skill-object-change"
+        description: "Names the changed skill, skill file, resource, section, metadata field, script, or other skill artifact."
+        paper_category: "Summarize Code Object Change"
+        paper_patterns:
+          - name: "Characteristics of changes"
+            definition: "Highlights the characteristics of the current change and compares it with alternative implementations to summarize the change."
+            example: "\"attempt at a 3rd I/O interface ... inspired by InputStream and OutputStream, but using growing buffers instead of byte arrays as the core data container\""
+          - name: "Object of change"
+            definition: "Summarizes the change from the point of view of the code object that was changed (attribute, method, class, package, etc.). The most common subcategory, found in over half of commits."
+            example: "\"remove creation of 'fat' jar...\""
+          - name: "Change list"
+            definition: "Lists changes to several code objects, often involving one or more source files, typically as an itemized list."
+            example: "\"this commit removes the following deprecated properties: 'server.connection-timeout' 'server.use-forward-headers' [...]\""
+          - name: "Contrast before and after"
+            definition: "Contrasts the state of a code object before and after the change."
+            example: "\"rename HeldCertificate.Builder.issuedBy() to signedBy()\""
+      - label: "illustrate-skill-function"
+        description: "Describes the changed skill behavior, agent capability, workflow effect, or user-facing function."
+        paper_category: "Illustrate Function"
+        paper_patterns:
+          - name: "Illustrate function"
+            definition: "Summarizes and explains the change from a functional perspective rather than naming the specific code object changed, informing collaborators what new behavior was introduced."
+            example: "\"Rename preferred-mapper property so it's clear it only applies to JSON\""
+      - label: "describe-skill-implementation-principle"
+        description: "Explains the technical mechanism, execution principle, or implementation strategy used by the skill change."
+        paper_category: "Describe Implementation Principle"
+        paper_patterns:
+          - name: "Describe implementation principle"
+            definition: "Describes the technical principle underpinning the change, i.e., the process by which the code executes correctly. The rarest What category (2.4% of analyzed commits)."
+            example: "\"SslContextBuilder using InetAddress.getByName(null) [...] On Android, null returns IPv6 loopback, which has the name 'ip6-localhost'\""
+      - label: "missing-what"
+        description: "Does not provide enough information to determine what changed in the skill."
+        paper_category: "Missing What"
+        paper_patterns:
+          - name: "Missing what"
+            definition: "Lacks any specification of what was changed, typically because the change is small/simple enough to be easily inferred (e.g., typo fixes, renames, whitespace changes)."
+            example: "\"fix typo a->an\""
+    coding_rule: "Assign every What expression category supported by the commit messages. Use missing-what only when no What information is present."
+
+  why_expression_categories:
+    type: "multi_label"
+    source: "commit_message_quality_taxonomy"
+    required: true
+    description: "All ways the commit messages express why the skill modification was made."
+    allowed:
+      - label: "describe-skill-issue"
+        description: "States a bug, error, failure, limitation, inconsistency, or other problem in a skill or its supporting artifacts."
+        paper_category: "Describe Issue"
+        paper_patterns:
+          - name: "Describe error scenario"
+            definition: "Directly describes where and how an error occurs; frequently indicates the source of a bug or defect, the steps to reproduce it, and its impact. The most common Why subcategory overall (19.8%)."
+            example: "\"As-is it throws unchecked exceptions on unexpected charsets. This is a problem because it can cause a misbehaving webserver to crash the client.\""
+          - name: "Introduce issue report"
+            definition: "Describes issues mainly by citing errors/defects/warnings recognized by quality assurance tools."
+            example: "\"remove warnings found by errorprone. [...] CallTest.java:2056: warning: [UnnecessaryParentheses] Unnecessary use of grouping parentheses [...]\""
+          - name: "Describe shortcoming"
+            definition: "Highlights shortcomings or weaknesses in the current implementation that motivate the commit."
+            example: "\"I'm unhappy with java.io: No timeouts [...] Features like mark/reset and available() are clumsy [...]\""
+      - label: "illustrate-skill-requirement"
+        description: "States an external requirement, upstream change, platform constraint, user need, or usage scenario that required the skill change."
+        paper_category: "Illustrate Requirement"
+        paper_patterns:
+          - name: "Usage need"
+            definition: "Describes specific needs or requirements of users, helping contributors understand the background and necessity of the change."
+            example: "\"Error-prone only works on pre-12 at the moment and we need this configuration to apply for all JDKs\""
+          - name: "Out of date"
+            definition: "Indicates the obsolescence of features or code, including deprecation and removal of unused code objects, or upgrades needed due to a dependency becoming obsolete."
+            example: "\"Remove outdated key. The 'spring.metrics.export.redis.aggregate-key-pattern' is no longer defined but was still referenced in the documentation.\""
+          - name: "Runtime or development environment change"
+            definition: "Indicates an adaptation to the current development code or runtime environment, e.g., to accommodate API modifications."
+            example: "\"API has changed, fixing the example\""
+      - label: "describe-skill-objective"
+        description: "States the intended goal, benefit, improvement, or desired outcome of the skill change."
+        paper_category: "Describe Objective"
+        paper_patterns:
+          - name: "To fix defects"
+            definition: "Makes explicit that the purpose of the change is to resolve a defect, clarifying how the proposed change will resolve it (as opposed to merely describing the error scenario)."
+            example: "\"Fix concurrent problem of zookeeper configcenter, wait to start until cache being fully populated\""
+          - name: "To make improvements"
+            definition: "Directly describes the improvement of the implementation, e.g., functional or non-functional goals, often using phrases like \"to do something\" or \"for something\"."
+            example: "\"AndroidLog: Added [...] methods for easier subclassing.\""
+      - label: "imply-skill-necessity"
+        description: "Implies the need for the skill change without explicitly stating an issue, requirement, or objective."
+        paper_category: "Imply Necessity"
+        paper_patterns:
+          - name: "Conventions and standards"
+            definition: "Describes or refers to conventions or standards (project agreements or industry specifications) that are the basis for a change."
+            example: "\"it is common to add tests to the same package as the class under test\""
+          - name: "Relation to prior commits"
+            definition: "Explains the relationship between the current commit and prior commits already merged into the repository, e.g., fixing a problem introduced by a previous change."
+            example: "\"the code was changed by commit <other url> but unfortunately the test was not part of the commit\""
+          - name: "Relation to an implemented feature"
+            definition: "Relates the current change to an existing or upcoming feature, providing context as part of a larger operation underway or as preparation for a planned change."
+            example: "\"a short step on the road to HTTP body format agnostic support\""
+          - name: "Improvements and benefits"
+            definition: "Indirectly describes the need for a change by explaining the improvements and benefits it brings, sometimes comparing before/after state. The most common Imply Necessity subcategory (15.5%)."
+            example: "\"Use custom exception type [...]. Since we omit the stack trace, this more clearly indicates the source being from Retrofit's mock behavior\""
+      - label: "missing-why"
+        description: "Does not provide enough information to determine why the skill change was made."
+        paper_category: "Missing Why"
+        paper_patterns:
+          - name: "Test cases"
+            definition: "Adds test cases to the repository; the rationale is common sense since adding tests for each feature is a widely shared convention."
+            example: "\"tests for canceling async requests\""
+          - name: "Typographic fixes"
+            definition: "Corrects typographical errors in code or documentation; the rationale (improving correctness/readability) is self-evident."
+            example: "\"fix typo a->an\""
+          - name: "Text file changes"
+            definition: "Changes made only to text files with specific functions, such as ChangeLog or README files."
+            example: "(changes confined to README/ChangeLog-type files, e.g., updating a changelog entry)"
+          - name: "Annotation changes"
+            definition: "Changes the content of code annotations; since annotations exist to increase readability, the Why is common sense."
+            example: "\"add docs about null responses\""
+          - name: "Code refactoring"
+            definition: "Refactors or formats code, e.g., polishing, renaming, cleaning up, to improve readability without changing behavior."
+            example: "\"Polish pom.xml. Apply consistent formatting, drop JDK 8 support and cleanup repo [...]\""
+          - name: "Version management"
+            definition: "Involves version management such as updating version numbers; a routine step important for maintainability."
+            example: "\"prepare version 2.8.1\""
+    coding_rule: "Assign every Why expression category supported by the commit messages. Use missing-why only when no Why information is present."
+
+  why_intentions:
+    type: "list_short_text"
+    required: true
+    description: "Concise free-text summaries of the message-stated intentions, or an empty list when why_expression_categories is only missing-why."
+    examples:
+      - "fix broken command invocation"
+      - "adapt the skill to a new client convention"
+      - "make the workflow easier to reuse"
+      - "support a new domain-specific task"
+
+  evidence:
+    type: "list_short_text"
+    required: true
+    description: "Short quotes or paraphrases from commit messages that support the What and Why coding."

@@ -1,1 +1,0 @@
-"""Mining-stage coverage statistics."""

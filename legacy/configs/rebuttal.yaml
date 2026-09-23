@@ -1,0 +1,3 @@
+seed: 42
+bootstrap_repetitions: 2000
+blind_sample_size: 293

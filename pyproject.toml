@@ -1,28 +1,24 @@
 [project]
 name = "skill-pattern-mine"
 version = "0.1.0"
-
+description = "An empirical study of how developers fork and modify agent skills on GitHub."
 readme = "README.md"
 requires-python = "==3.12.*"
 license = { text = "MIT" }
-
 dependencies = [
-    "aiohttp",
-    "matplotlib",
-    "pydantic",
-    "pyyaml",
-    "tqdm",
+    "pydantic==2.13.5",
+    "pyyaml==6.0.2",
+    "pydriller==2.12",
+    "gitpython==3.1.62",
 ]
 
 [dependency-groups]
-dev = ["pytest"]
+dev = []
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
 
-[tool.hatch.build.targets.wheel]
-# src/common.py holds cross-stage shared helpers (import common).
-# Add audit/analysis/eval as those stages are migrated.
-packages = ["src/mine", "src/label", "src/audit", "src/analysis"]
-force-include = { "src/common.py" = "common.py" }
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
