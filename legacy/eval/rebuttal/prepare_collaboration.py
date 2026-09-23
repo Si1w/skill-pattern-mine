@@ -10,7 +10,7 @@ LEGACY = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(LEGACY))
 from eval.rebuttal.audit_materials import write_form
 
-SOURCE = LEGACY / "data/rebuttal/human-293-20260923/human"
+SOURCE = LEGACY / "data/rebuttal/human-unseen-v2-20260923/human"
 TARGET = LEGACY / "annotation"
 SECRET_PATTERNS = [
     re.compile(r"\bgh[pousr]_[A-Za-z0-9_]{20,}\b"),
@@ -34,8 +34,15 @@ def sanitize(value):
 
 def main():
     TARGET.mkdir(exist_ok=True)
-    manifest = {"run_id": "human-293-20260923", "population": 1220, "blind_sample": 293,
-                "security_instances": 209, "security_lines": 1521,
+    selection = json.loads((SOURCE / "coordinator_blind_manifest.json").read_text())
+    security_scope = json.loads((SOURCE / "security_scope.json").read_text())
+    manifest = {"run_id": selection["run_id"], "population": selection["population"],
+                "frame": selection["frame"], "blind_sample": selection["sample_size"],
+                "audit_overlap": selection["audit_overlap"], "bootstrap_overlap": selection["bootstrap_overlap"],
+                "supersedes_blind_run": "human-293-20260923",
+                "security_instances": security_scope["eligible_positive_instances"],
+                "security_lines": security_scope["eligible_matched_lines"],
+                "security_scope": security_scope,
                 "answer_fields_included": False,
                 "redaction": "Credential-shaped strings are replaced; task IDs and sample membership are unchanged.",
                 "files": {}}
@@ -49,6 +56,7 @@ def main():
         destination = TARGET / source.name
         write_form(destination, sanitize(payload))
         manifest["files"][source.name] = {"sha256": hashlib.sha256(destination.read_bytes()).hexdigest(),
+                                         "run_id": payload["run_id"],
                                          "tasks": len(payload["tasks"])}
     (TARGET / "package.json").write_text(json.dumps(manifest, indent=2) + "\n")
 

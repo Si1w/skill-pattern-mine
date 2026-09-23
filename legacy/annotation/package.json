@@ -1,19 +1,42 @@
 {
-  "run_id": "human-293-20260923",
-  "population": 1220,
+  "run_id": "human-unseen-v2-20260923",
+  "population": 638,
+  "frame": {
+    "candidate_count": 1220,
+    "analyzed_count": 1126,
+    "audit_excluded": 277,
+    "bootstrap_excluded": 280,
+    "excluded_in_both": 69,
+    "excluded_union": 488,
+    "eligible_count": 638
+  },
   "blind_sample": 293,
-  "security_instances": 209,
-  "security_lines": 1521,
+  "audit_overlap": 0,
+  "bootstrap_overlap": 0,
+  "supersedes_blind_run": "human-293-20260923",
+  "security_instances": 109,
+  "security_lines": 642,
+  "security_scope": {
+    "original_positive_instances": 209,
+    "excluded_instances": 100,
+    "eligible_positive_instances": 109,
+    "eligible_matched_lines": 642,
+    "audit_overlap": 0,
+    "bootstrap_overlap": 0,
+    "source_sha256": "672debf904284cb7a5abeeecced63019611ce0b166e56349e0dff84c62215d0d"
+  },
   "answer_fields_included": false,
   "redaction": "Credential-shaped strings are replaced; task IDs and sample membership are unchanged.",
   "files": {
     "blind.html": {
-      "sha256": "ae19d8aabd30baee5448343633e29faa7e615048e0c72e9102fba97ae21384c3",
+      "sha256": "52cacf6a3771ec8a4c2527793d71d114f8445efff44c85ab153460a30b8ec3e8",
+      "run_id": "human-unseen-v2-20260923",
       "tasks": 293
     },
     "security.html": {
-      "sha256": "73e11f1a78397554a661c83dcddf6b03cdbe4883576f751242e0823ae4f4b0d7",
-      "tasks": 209
+      "sha256": "77e6f82cabdff9288638103b41c02be227ff621d34feda30b32935968f9a5d55",
+      "run_id": "human-unseen-v2-20260923",
+      "tasks": 109
     }
   }
 }

@@ -13,7 +13,7 @@ import yaml
 LEGACY = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(LEGACY))
 sys.path.insert(0, str(LEGACY / "src"))
-from eval.rebuttal.models import BlindTask, Settings
+from eval.rebuttal.models import BlindTask, BlindSamplingFrame, Settings
 from eval.label import rq4
 from analysis.build_instances import build_patch
 
@@ -55,6 +55,23 @@ def write_form(path, payload):
     path.write_text(HTML.replace("PAYLOAD", encoded))
 
 
+def select_blind_records(records, analyzed_ids, audit_records, bootstrap_records, size, seed):
+    """Sample only final instances with no saved audit or bootstrap exposure."""
+    if len(set(records.values())) != len(records) or not analyzed_ids <= set(records.values()):
+        raise ValueError("Final corpus identities must map uniquely to labeling inputs")
+    analyzed = {name for name, identity in records.items() if identity in analyzed_ids}
+    audit = analyzed & audit_records
+    bootstrap = analyzed & bootstrap_records
+    eligible = sorted(analyzed - audit - bootstrap)
+    frame = BlindSamplingFrame(candidate_count=len(records), analyzed_count=len(analyzed),
+        audit_excluded=len(audit), bootstrap_excluded=len(bootstrap),
+        excluded_in_both=len(audit & bootstrap), excluded_union=len(audit | bootstrap),
+        eligible_count=len(eligible))
+    if size > len(eligible):
+        raise ValueError(f"Requested {size} tasks but only {len(eligible)} are eligible")
+    return random.Random(seed).sample(eligible, size), frame
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run_id", required=True)
@@ -63,7 +80,20 @@ def main():
     out.mkdir(parents=True, exist_ok=False)
     settings = Settings.model_validate(yaml.safe_load((LEGACY / "configs/rebuttal.yaml").read_text()))
     candidates = sorted((LEGACY / "data/label/inputs").glob("*.json"))
-    chosen = random.Random(settings.seed).sample(candidates, settings.blind_sample_size)
+    corpus_path = LEGACY / "data/analysis/instances.jsonl"
+    analyzed_ids = {json.loads(line)["modification_id"] for line in corpus_path.read_text().splitlines() if line}
+    audit_files = sorted((LEGACY / "data/audit").glob("*.json"))
+    audit_samples = sorted((LEGACY / "data/audit/sample").glob("*.json"))
+    bootstrap_files = sorted((LEGACY / "data/label/sample").glob("*.json"))
+    if not audit_files or not audit_samples or not bootstrap_files:
+        raise ValueError("Saved audit and bootstrap sources are required for exposure exclusion")
+    audit_records = {v["record"] for p in audit_files for v in json.loads(p.read_text())["verdicts"]}
+    audit_records.update(p.name for p in audit_samples)
+    bootstrap_records = {p.name for p in bootstrap_files}
+    records = {p.name: json.loads(p.read_text())["modification_id"] for p in candidates}
+    chosen_names, frame = select_blind_records(records, analyzed_ids, audit_records,
+                                               bootstrap_records, settings.blind_sample_size, settings.seed)
+    chosen = [LEGACY / "data/label/inputs" / name for name in chosen_names]
     taxonomy = json.loads((LEGACY / "skills/iter-taxonomy-build/taxonomy.json").read_text())
     tasks, mapping = [], []
     originals = {}
@@ -77,9 +107,14 @@ def main():
         tasks.append(task.model_dump(exclude={"labels", "evidence", "uncertainty"}))
         mapping.append({"task_id": task_id, "record": path.name, "instance_id": data["modification_id"],
                         "in_bootstrap_sample": (LEGACY / "data/label/sample" / path.name).exists()})
-    manifest = {"seed": settings.seed, "population": len(candidates), "sample_size": len(tasks),
-                "selection": "simple random sample without replacement from all candidates",
-                "inclusion_probability": len(tasks) / len(candidates),
+    manifest = {"run_id": args.run_id, "seed": settings.seed, "population": frame.eligible_count,
+                "frame": frame.model_dump(), "sample_size": len(tasks),
+                "selection": "simple random sample without replacement from final instances excluding known audit and bootstrap exposure",
+                "inclusion_probability": len(tasks) / frame.eligible_count,
+                "audit_overlap": len(set(chosen_names) & audit_records),
+                "bootstrap_overlap": len(set(chosen_names) & bootstrap_records),
+                "source_sha256": {str(p.relative_to(LEGACY)): hashlib.sha256(p.read_bytes()).hexdigest()
+                                  for p in [corpus_path, *audit_files, *audit_samples, *bootstrap_files, *candidates]},
                 "held_out_status": "not claimed; taxonomy iteration membership is unavailable",
                 "mapping": mapping}
     (out / "coordinator_blind_manifest.json").write_text(json.dumps(manifest, indent=2))
@@ -89,6 +124,19 @@ def main():
         for match in csv.DictReader(stream):
             key = (match["instance_id"], match["path"], match["patch_line"])
             matches.setdefault(key, []).append(match)
+    all_positive_ids = {key[0] for key in matches}
+    if not all_positive_ids <= analyzed_ids:
+        raise ValueError("Security matches include instances outside the final corpus")
+    excluded_ids = {identity for name, identity in records.items() if name in audit_records | bootstrap_records}
+    eligible_ids = analyzed_ids - excluded_ids
+    matches = {key: values for key, values in matches.items() if key[0] in eligible_ids}
+    security_scope = {"original_positive_instances": len(all_positive_ids),
+                      "excluded_instances": len(all_positive_ids & excluded_ids),
+                      "eligible_positive_instances": len({key[0] for key in matches}),
+                      "eligible_matched_lines": len(matches),
+                      "audit_overlap": 0, "bootstrap_overlap": 0,
+                      "source_sha256": hashlib.sha256((LEGACY / "eval/tables-and-figures/rq4-security-matches.csv").read_bytes()).hexdigest()}
+    (out / "security_scope.json").write_text(json.dumps(security_scope, indent=2))
     positive_ids = sorted({key[0] for key in matches})
     security_tasks, security_mapping = [], []
     for i, identity in enumerate(positive_ids):
@@ -113,13 +161,13 @@ Two raters independently complete the same {len(tasks)} blind tasks and the same
 
 Blind annotation applies the fixed taxonomy to the patch. No model labels, predictions or rationale are present in the form. Record label evidence or an explicit reason for an empty set. Hover or expand each label to read its definition. Note insufficient context rather than guessing. This checks taxonomy application, not independent open coding or exhaustive taxonomy validity.
 
-Security annotation distinguishes textual meaning from change direction. Read the full patch around every line. A security guardrail can match a rule while reducing risk. Examples and quoted commands need context. Use uncertain when the prior state is not observable. The security set is a census of detector-positive instances; it cannot estimate detector recall or the rate of vulnerabilities among all adaptations.
+Security annotation distinguishes textual meaning from change direction. Read the full patch around every line. A security guardrail can match a rule while reducing risk. Examples and quoted commands need context. Use uncertain when the prior state is not observable. The security set includes all detector-positive instances in the eligible frame after the same exposure exclusions; it does not represent all original positives and cannot estimate detector recall or the rate of vulnerabilities among all adaptations.
 
 Both raters must disclose previous exposure to these records or model answers and relevant expertise. Coordinator manifests contain original identities and bootstrap membership; do not send them to raters. The sample is not claimed as held out from taxonomy development because the iteration log is missing. Model-output anchoring is reduced only to the extent that raters have not previously seen those answers.
 
 After both exports, adjudicate disagreements while model outputs remain hidden, save adjudicated evidence, then compare against original predictions. Do not treat missing/incomplete tasks as negative labels or agreements. Return four files: blind-A.json, blind-B.json, security-A.json and security-B.json. No judgments have been prefilled.
 
-Sampling: seed {settings.seed}, simple random sample without replacement, n={len(tasks)}, N={len(candidates)}. The approximate 95% worst-case margin is 5 percentage points for one overall binary proportion with finite-population correction, not for every label's precision or recall.
+Sampling: seed {settings.seed}, simple random sample without replacement, n={len(tasks)}, eligible N={frame.eligible_count} after excluding {frame.excluded_union} known exposed records from {frame.analyzed_count} final instances. The inference scope is the eligible subset, not all candidates. Zero-label exclusion validity is not assessed. Rare-label precision is not guaranteed. Old blind runs are superseded and must not be merged by task ID.
 ''')
     provenance = {"source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                   "sample_size": len(tasks), "security_instances": len(security_tasks), "security_lines": len(matches)}

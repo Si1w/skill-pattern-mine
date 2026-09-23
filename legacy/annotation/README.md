@@ -1,6 +1,12 @@
 # Coauthor annotation for the rebuttal
 
-The rebuttal deadline is September 25, 2026; confirm the exact time and timezone with the corresponding author. Both raters independently annotate the same 293 randomly selected candidates and the same 209 security-positive instances. Neither form includes model predictions or rationales. Coordinator mappings and completed ratings are not part of this package.
+The rebuttal deadline is September 25, 2026; confirm the exact time and timezone with the corresponding author. Both raters independently annotate the same 293 randomly selected eligible final instances and the same 109 eligible security-positive instances. Neither form includes model predictions or rationales. Coordinator mappings and completed ratings are not part of this package.
+
+## Current version
+
+Both forms use `human-unseen-v2-20260923`. Run `git pull --ff-only` on the `rebuttal` branch before opening them if you already cloned the repository. Old forms are superseded. Keep any previous exports separately; repeated B/S task IDs do not identify the same records across versions. Browser storage is separated by run ID.
+
+The starting corpus contains 1,126 final instances; 94 of the original 1,220 candidates were excluded after receiving no final labels. We additionally exclude 277 previously audited instances and 280 known taxonomy bootstrap instances, with 69 in both, leaving 638 eligible records. The blind sample selects 293 without replacement (seed 42). Security validation covers all 109 detector-positive instances in that eligible frame, excluding 100 previously exposed positives. Both forms have zero overlap with the saved audit and bootstrap sets.
 
 ## Get the materials
 
@@ -9,7 +15,7 @@ git clone --branch rebuttal --single-branch https://github.com/Si1w/skill-patter
 cd skill-pattern-mine
 ```
 
-Open [blind.html](blind.html) and [security.html](security.html) from your local checkout in a browser. GitHub's file preview does not run these forms. No Python installation or model account is required. The files are approximately 15 MB and 35 MB; allow the browser time to load them. Use these shared copies for both raters so that credential redaction is identical.
+Open [blind.html](blind.html) and [security.html](security.html) from your local checkout in a browser. GitHub's file preview does not run these forms. No Python installation or model account is required. Allow the browser time to load these large standalone files. Use these shared copies for both raters so that credential redaction is identical.
 
 ## Work independently
 
@@ -26,12 +32,12 @@ Avoid the existing corpus labels, old audit results, model rationales, coordinat
 
 Return `blind-A.json`, `blind-B.json`, `security-A.json` and `security-B.json` to the corresponding author through the agreed private channel. Do not post ratings as GitHub issues, pull-request comments or public files before independent annotation and adjudication finish. Exported ratings are ignored by Git to reduce accidental commits. Coauthor repository write access is not necessary to open the forms or export results.
 
-Alongside the exports, state your relevant expertise, prior exposure to the sampled changes or original model answers, and any incomplete tasks. There is known overlap with taxonomy development, so do not describe this as a strictly held-out evaluation. The sample includes candidates excluded from the final analysis and must be completed in the supplied order without cherry-picking.
+Alongside the exports, state your relevant expertise, prior exposure to the sampled changes or original model answers, and any incomplete tasks. Known audit and bootstrap overlap is zero, but later taxonomy iteration membership and unrecorded exposure remain unknown, so do not describe this as a strictly held-out evaluation. All selected records belong to the final analyzed corpus. Complete them in the supplied order without cherry-picking.
 
 ## Time and evidence limits
 
-There are 293 blind tasks with a median patch length of 184 lines; 59 exceed 1,000 lines. The security form covers 1,521 distinct matched lines across 209 instances. Time the first few tasks and report feasibility early. Unfinished tasks must stay missing, not be recorded as empty label sets or benign judgments. Human annotation is still pending; this package contains no completed judgments.
+There are 293 blind tasks with a median patch length of 181 lines; 62 exceed 1,000 lines. The security form covers 642 distinct matched lines across 109 instances. Time the first few tasks and report feasibility early. Unfinished tasks must stay missing, not be recorded as empty label sets or benign judgments. Human annotation is still pending; this package contains no completed judgments.
 
-The sample size targets approximately five percentage points of worst-case sampling precision for one overall binary proportion under simple random sampling from 1,220 candidates. It does not guarantee that rare labels have precise precision or recall. Security tasks cover detector positives only and cannot estimate detector recall.
+For one binary proportion within the 638 eligible records, a sample of 293 has approximately 4.2 percentage points of worst-case 95% sampling precision under simple random sampling with finite-population correction. This does not establish representativeness of all 1,126 analyzed instances or validate the 94 zero-label exclusions. It does not guarantee that rare labels have precise precision or recall. Security tasks cover eligible detector positives only; results cannot represent all 209 original positives or estimate detector recall.
 
 Credential-shaped strings have been replaced with `<REDACTED_CREDENTIAL>` while task IDs and sample membership remain unchanged. File checksums and task counts are in [package.json](package.json).

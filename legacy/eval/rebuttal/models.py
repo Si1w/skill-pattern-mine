@@ -36,3 +36,13 @@ class BlindTask(BaseModel):
     labels: list[str] | None = None
     evidence: str = ""
     uncertainty: str = ""
+
+
+class BlindSamplingFrame(BaseModel):
+    candidate_count: int
+    analyzed_count: int
+    audit_excluded: int
+    bootstrap_excluded: int
+    excluded_in_both: int
+    excluded_union: int
+    eligible_count: int

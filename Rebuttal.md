@@ -1,24 +1,26 @@
 # Rebuttal for paper #1322
 
-Updated: 2026-09-23. Current priority: the submitted study under `legacy/`. Deadline: **2026-09-25** (confirmed by the user; exact cutoff time and timezone remain unconfirmed). Automatic analyses below are complete; human annotation and model reruns are not. Scope and methods: [ADR 0033](docs/adr/0033-prioritize-legacy-rebuttal.md), [ADR 0035](docs/adr/0035-two-day-local-rebuttal-analysis.md), [ADR 0036](docs/adr/0036-blind-audit-293-candidates.md).
+Updated: 2026-09-23. Current priority: the submitted study under `legacy/`. Deadline: **2026-09-25** (confirmed by the user; exact cutoff time and timezone remain unconfirmed). Automatic analyses below are complete; human annotation and model reruns are not. Scope and methods: [ADR 0033](docs/adr/0033-prioritize-legacy-rebuttal.md), [ADR 0035](docs/adr/0035-two-day-local-rebuttal-analysis.md), [ADR 0038](docs/adr/0038-apply-exposure-exclusions-to-security-audit.md).
 
 **合作者入口：**请两位标注者统一使用[可共享标注包](legacy/annotation/README.md)。该副本进一步遮盖了 token 格式的字符串，保持相同任务编号和抽样成员；无需 Python 或模型登录。根目录 [README TODO](README.md#rebuttal-todo-september-25)记录分工与截止日期。
+
+**版本更新：**两份共享表单使用 `human-unseen-v2-20260923`。旧盲标样本曾重叠 67 条旧人工审计记录和 82 条 taxonomy 样本；旧安全包覆盖全部 209 个阳性。旧版已停用并保留追溯，任何旧导出需单独保存，不可按 B/S 任务编号直接合并到新版。
 
 ## 你现在需要做什么
 
 | 优先级 | 你的任务 | 已准备材料与完成标准 |
 | --- | --- | --- |
-| 立即开始 | 两人分别独立标注同样的 **293 条**，不要先讨论或查看模型答案 | 打开 [blind.html](legacy/data/rebuttal/human-293-20260923/human/blind.html)，分别输入 A/B；显式完成每条后定期导出 `blind-A.json`、`blind-B.json`。全部来自 1,220 条候选记录的固定随机样本，其中 21 条是原分析排除的零标签候选。 |
-| 同期进行 | 两人独立审计 **209 个安全命中实例、1,521 条不同命中行** | 打开 [security.html](legacy/data/rebuttal/human-293-20260923/human/security.html)，逐行区分文本含义和风险变化方向；导出 `security-A.json`、`security-B.json`。这是工作量较大的全量阳性审计，不要只读关键字。 |
+| 立即开始 | 两人分别独立标注同样的 **293 条**，不要先讨论或查看模型答案 | 打开 [blind.html](legacy/annotation/blind.html)，分别输入 A/B；显式完成每条后定期导出 `blind-A.json`、`blind-B.json`。从最终 1,126 条中排除 488 条旧人工审计或已知 taxonomy 样本，再从剩余 638 条抽取 293 条；与已知旧样本重叠为 0，不含 94 条零标签排除记录。 |
+| 同期进行 | 两人独立审计 **109 个安全命中实例、642 条不同命中行** | 打开 [security.html](legacy/annotation/security.html)，逐行区分文本含义和风险变化方向；导出 `security-A.json`、`security-B.json`。这是相同排除规则下剩余阳性实例的全量审计，不代表原始全部 209 个阳性；不要只读关键字。 |
 | 标注结束后 | 先保存独立结果，再协调分歧；此时仍不看模型答案 | 保留原始两份结果和协调后的证据。把四份 JSON 交回后，可继续计算 agreement、precision/recall 和安全类别分布。未完成任务不能当作无标签或无风险。 |
-| 必须披露 | 两位标注者的背景、是否看过旧标签/答案/样本 | 新样本中 **82 条**属于已知 taxonomy bootstrap 样本，迭代成员记录缺失；不能声称严格 held-out。若同一作者曾见过模型答案，需要披露记忆与暴露风险。 |
+| 必须披露 | 两位标注者的背景、是否看过旧标签/答案/样本 | 新版盲标和安全审计均排除了已知旧人工审计及 taxonomy bootstrap 样本，但迭代成员记录缺失，仍不能声称严格 held-out。若同一作者曾见过模型答案，需要披露记忆与暴露风险。 |
 | 今天确认 | **截止日期已确定为 9 月 25 日**；补充具体截止时刻、时区、字数限制，以及能否提交新增实验/外部链接 | 不默认按伦敦时间或 AoE 计算；当前英文草稿未按会议字数压缩。 |
 | 有条件再做 | 提供可用的模型登录/运行环境，并确定重跑配置和费用上限 | 本机有 Claude CLI，但 `claude auth status --json` 返回 `loggedIn: false`、`authMethod: none`。不要在聊天或文档中粘贴密钥；在本机配置即可。 |
 | 稿件检查 | 恢复或确认参考文献来源 | 当前 `paper/skills.bib` 原本为 **0 字节**；已从论文 Git HEAD 恢复[候选副本](legacy/data/rebuttal/manuscript-20260923/skills.recovered-from-HEAD.bib)，覆盖全部 39 个引用键，并在隔离副本中完成编译。请确认能否采用该来源；本次未覆盖你现有的空文件。 |
 
-**293 条的含义：**对 N=1,220 的有限总体，在简单随机抽样及最保守 p=0.5 下，对一个总体二元比例给出约 95% 置信水平、±5 个百分点的抽样精度；这不是每个标签 precision/recall 的精度保证。两个人各标同样的 293 条，样本量仍为 293。两天内若无法全部完成，须报告未完成量和选择机制，不能悄悄更换样本或依据结果停止。[抽样决策](docs/adr/0036-blind-audit-293-candidates.md)
+**293 条的含义：**对剩余 N=638 的有限总体，在简单随机抽样及最保守 p=0.5 下，对一个总体二元比例给出约 95% 置信水平、约 ±4.2 个百分点的抽样精度；这仅适用于剩余 638 条中的一个二元比例，不是全部 1,126 条的保证，也不是每个标签 precision/recall 的精度保证。两个人各标同样的 293 条，样本量仍为 293。两天内若无法全部完成，须报告未完成量和选择机制，不能悄悄更换样本或依据结果停止。[抽样决策](docs/adr/0038-apply-exposure-exclusions-to-security-audit.md)
 
-**执行顺序：**盲标 patch 中位长度为 184 行，59 条超过 1,000 行，最大 18,254 行；请立即计时完成前几条，判断人力是否够用。安全页面已显示每条命中的前后 8 行及标记，完整 patch 保留在左侧，需按语义补查上下文。**9 月 23 日：**开始独立盲标和安全审计，并确认会议规则及模型环境。**9 月 24 日：**争取完成独立标注，先导出原始结果，再协调分歧并计算指标。**9 月 25 日：**优先完成结果核对、英文压缩和提交，预留缓冲；不要把新的大实验留到截止当天。具体日程需以确认后的截止时刻和时区为准。下面的自动分析已完成，不需要你手工复算。[人工操作说明](legacy/data/rebuttal/human-293-20260923/human/README.md)
+**执行顺序：**盲标 patch 中位长度为 181 行，62 条超过 1,000 行，最大 18,344 行；请立即计时完成前几条，判断人力是否够用。安全页面已显示每条命中的前后 8 行及标记，完整 patch 保留在左侧，需按语义补查上下文。**9 月 23 日：**开始独立盲标和安全审计，并确认会议规则及模型环境。**9 月 24 日：**争取完成独立标注，先导出原始结果，再协调分歧并计算指标。**9 月 25 日：**优先完成结果核对、英文压缩和提交，预留缓冲；不要把新的大实验留到截止当天。具体日程需以确认后的截止时刻和时区为准。下面的自动分析已完成，不需要你手工复算。[人工操作说明](legacy/annotation/README.md)
 
 ## 已经直接完成的工作
 
@@ -32,7 +34,7 @@ Updated: 2026-09-23. Current priority: the submitted study under `legacy/`. Dead
 | agreement 核算 | 明确 κ/α 聚合，验证 α 有限样本修正，补 exact-set agreement 和逐标签质量表 | [agreement](legacy/data/rebuttal/local-final-20260923/agreement.csv)、[per-label](legacy/data/rebuttal/local-final-20260923/agreement_per_label.csv) |
 | 原始标签与人工替换的敏感性 | 在相同 1,126 实例上比较 raw model 与 final labels；额外给 1,220 候选计数 | [consensus sensitivity](legacy/data/rebuttal/local-final-20260923/consensus_sensitivity.csv) |
 | 安全扫描核对 | 按规则和仓库汇总；读取上游同一文件，检查同规则是否已出现 | [rules](legacy/data/rebuttal/local-final-20260923/security_by_rule.csv)、[repositories](legacy/data/rebuttal/local-final-20260923/security_by_repository.csv)、[baseline](legacy/data/rebuttal/local-final-20260923/security_baseline/summary.json) |
-| 人工材料 | 293 条固定随机盲标表单、209 个安全实例表单、隐藏答案、独立导出、操作说明 | [human materials](legacy/data/rebuttal/human-293-20260923/human/README.md) |
+| 人工材料 | 293 条固定随机盲标表单、109 个安全实例表单、隐藏答案、独立导出、操作说明 | [human materials](legacy/annotation/README.md) |
 | 论文措辞修订 | 已修改 abstract、intro、RQ1-RQ4 answer boxes、agreement 解释、threats、conclusion，补 Table II 1,126、区分 fork/instance、移除 RADAR 段落 | [main.tex](paper/main.tex)、[本次修改 diff](legacy/data/rebuttal/manuscript-20260923/main.patch) |
 
 ## 当前做不了、两天内不应承诺的内容
@@ -40,7 +42,7 @@ Updated: 2026-09-23. Current priority: the submitted study under `legacy/`. Dead
 | 项目 | 实际限制 | Rebuttal 应如何处理 |
 | --- | --- | --- |
 | 用 AI 代替独立人工验证 | 无法回答评审对 anchoring 和人类独立判断的要求 | 等待两位研究者真实结果；不捏造 precision、recall 或安全 TP。 |
-| 严格 held-out taxonomy 验证 | 本次样本有 82 条已知 bootstrap 重合，后续迭代日志缺失 | 称 independent annotation with model outputs hidden；不能称完整 held-out 或独立 taxonomy 推导。 |
+| 严格 held-out taxonomy 验证 | 已知 audit/bootstrap 重合为 0，但后续迭代日志缺失 | 称 independent annotation with model outputs hidden；不能称完整 held-out 或独立 taxonomy 推导。 |
 | 原模型的精确复现 | 历史 snapshot/temperature 未完整记录；当前 CLI 未登录 | 可在配置明确后做新配置下的两次运行，但不能声称恢复了原随机过程。目前未执行任何模型重跑。 |
 | 完整同一 skill、同一 commit 的验证 | 本地 1,126 个 frozen downstream heads 全部不可用；完整恢复和重新标注尚未完成 | 已做单 skill/单保留提交子集分析，但明确它不等价于原子单位。网络可能支持后续恢复，不能说永远无法做。 |
 | 完整安全风险前后对照 | 没有完整 downstream package endpoints，正则也不能判断风险方向 | 已完成上游同文件背景检查；不称其为完整 paired package baseline，不推断风险上升。 |
@@ -171,11 +173,11 @@ We completed all six repository exclusions and repository-specific RQ1-RQ3 table
 
 ### A/B/C: Security validation
 
-The 18.6% figure means 209/1,126 instances with regex matches in added text, not confirmed vulnerabilities. There are 1,562 rule matches on 1,521 distinct added lines. In 496 of the 767 matches whose baseline file exists, the same rule already matches that file; this covers 91 positive instances. This context check is not a complete paired package comparison and does not determine risk direction. We have removed claims of malicious injection, expanded authority and bypass of code review. Independent human assessment remains pending: **[insert completed audit size, textual categories, risk direction, rule-level precision, agreement and uncertainty]**. No security precision or risk rate is claimed before that assessment.
+The 18.6% figure means 209/1,126 instances with regex matches in added text, not confirmed vulnerabilities. There are 1,562 rule matches on 1,521 distinct added lines. In 496 of the 767 matches whose baseline file exists, the same rule already matches that file; this covers 91 positive instances. This context check is not a complete paired package comparison and does not determine risk direction. We have removed claims of malicious injection, expanded authority and bypass of code review. Applying the same exposure exclusions leaves 109 of the 209 positive instances and 642 matched lines for independent assessment. Human outcomes will describe this eligible subset only. Independent human assessment remains pending: **[insert completed audit size, textual categories, risk direction, rule-level precision, agreement and uncertainty]**. No security precision or risk rate is claimed before that assessment.
 
 ### B/C: Independent labels and repeatability
 
-We agree that correction of model-proposed labels does not remove anchoring. We prepared a fixed random sample of 293 of all 1,220 candidates for two independent raters, including candidates that may have received no labels; predictions and rationales are hidden. Human results are pending: **[insert independent agreement, adjudication, per-label precision/recall and support, annotator exposure]**. This is not claimed as held out from taxonomy construction: 82 sampled records overlap the known bootstrap set and later iteration membership is unavailable. It validates application of the fixed taxonomy, not its exhaustive coverage. Separate model reruns have not been completed; the original snapshot is not fully recorded and the current runtime is unauthenticated. We will not substitute consistency with consensus for repeated-run stability.
+We agree that correction of model-proposed labels does not remove anchoring. We restricted validation to the 1,126 analyzed instances and excluded 488 with known prior audit or taxonomy bootstrap exposure. We drew 293 records without replacement from the remaining 638 (seed 42) for two independent raters; predictions and rationales are hidden. The 94 candidates with no final labels are outside this validation frame. Human results are pending: **[insert independent agreement, adjudication, per-label precision/recall and support, annotator exposure]**. Known audit and bootstrap overlap is zero, but later iteration membership is unavailable, so strict held-out status is not claimed. Validation estimates apply to the 638 eligible instances, not the full corpus; exclusion of zero-label candidates is not validated. It validates application of the fixed taxonomy, not its exhaustive coverage. Separate model reruns have not been completed; the original snapshot is not fully recorded and the current runtime is unauthenticated. We will not substitute consistency with consensus for repeated-run stability.
 
 ### B: Scripts, PRs and single-family instances
 
@@ -199,7 +201,7 @@ uv run --locked python legacy/eval/rebuttal/prs.py --run_id NEW_PR_RUN
 uv run --locked python legacy/eval/rebuttal/audit_materials.py --run_id NEW_HUMAN_RUN
 ```
 
-For offline PR recomputation, use the existing PR run ID with `--offline`; it reads saved listings rather than querying GitHub. The local analysis completed a 20-instance pilot and the full corpus. Four behavioral tests cover alpha's finite-rating correction, undefined constant ratings, root boundaries and preservation of multiple branches within a fork. Both form scripts pass JavaScript syntax checking; payload checks verify 293 blind tasks with no model predictions and 209 security tasks. Forms have not been tested in a browser automation environment. Full source hashes, settings, lockfile hash and analysis source snapshots are in [run.json](legacy/data/rebuttal/local-final-20260923/run.json) and [source](legacy/data/rebuttal/local-final-20260923/source/); unavailable root Git metadata is explicitly recorded. Original inputs and published tables were retained.
+For offline PR recomputation, use the existing PR run ID with `--offline`; it reads saved listings rather than querying GitHub. The local analysis completed a 20-instance pilot and the full corpus. Seven behavioral tests cover alpha's finite-rating correction, undefined constant ratings, root boundaries, preservation of multiple branches within a fork, and blind-sample exclusions and identity integrity. Both form scripts pass JavaScript syntax checking; payload checks verify 293 blind tasks with no model predictions and 109 security tasks. Forms have not been tested in a browser automation environment. Full source hashes, settings, lockfile hash and analysis source snapshots are in [run.json](legacy/data/rebuttal/local-final-20260923/run.json) and [source](legacy/data/rebuttal/local-final-20260923/source/); unavailable root Git metadata is explicitly recorded. Original inputs and published tables were retained.
 
 ## Submission gate
 

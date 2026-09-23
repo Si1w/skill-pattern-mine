@@ -6,12 +6,14 @@
 
 The current priority is the rebuttal for paper #1322, due **September 25, 2026**. The exact cutoff time, timezone and response length still need confirmation. Work is on the `rebuttal` branch and builds on `legacy/`. See [Rebuttal.md](Rebuttal.md) for results and the response draft, and [coauthor annotation instructions](legacy/annotation/README.md) for the ready-to-use forms.
 
+Both forms now use version `human-unseen-v2-20260923`. Update your checkout before starting. The old forms are superseded; preserve existing exports separately and never merge old and new task IDs. Of the 1,126 analyzed instances, 488 have known prior exposure and 638 remain eligible. The same exclusion rule reduces security validation from 209 to 109 positives. Original descriptive statistics retain their original denominators.
+
 ### Coauthors: start here
 
 Clone the `rebuttal` branch and open [blind.html](legacy/annotation/blind.html) and [security.html](legacy/annotation/security.html) locally in a browser. Use rater IDs `A` and `B`; each person completes the same tasks independently. Do not read model predictions or old audit results before finishing. Export ratings regularly and return them privately to the corresponding author; repository write access is not required.
 
-- [ ] **Both raters:** independently complete the same **293 blind tasks**, including the candidates excluded from the final corpus.
-- [ ] **Both raters:** independently audit **209 security-positive instances / 1,521 matched lines**, recording textual meaning and change direction.
+- [ ] **Both raters:** independently complete the same **293 blind tasks**, drawn from 638 eligible final instances after excluding known prior audit and taxonomy exposure. The 94 zero-label exclusions are outside this frame.
+- [ ] **Both raters:** independently audit **109 eligible security-positive instances / 642 matched lines**, recording textual meaning and change direction.
 - [ ] **Both raters:** return `blind-A.json`, `blind-B.json`, `security-A.json`, and `security-B.json`, with expertise, prior exposure and incomplete-task notes.
 - [ ] **Authors:** preserve independent exports, adjudicate disagreements before viewing model predictions, then compute agreement, per-label precision/recall and security outcomes.
 - [ ] **Corresponding author:** confirm the deadline time/timezone, word limit and rules on new results or external links.
