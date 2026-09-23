@@ -19,6 +19,10 @@ Open [blind.html](blind.html) and [security.html](security.html) from your local
 
 ## Work independently
 
+The patch viewer colors additions green and deletions red, with original and modified line numbers. Use **Jump to file** or **Previous/Next change** to navigate, **Wrap lines** and **Font** to adjust readability, and **Wider patch** for more space. **Raw patch** shows the exact original text. All context lines are retained; file sections can be collapsed manually. These display controls do not change labels or sampling.
+
+Before refreshing after a viewer update, export a backup. Reopen the same file in the same browser and enter the same rater ID to reload saved judgments. This display update preserves the run ID, task IDs and browser storage keys; it does not migrate ratings from superseded sampling versions.
+
 1. Coordinate who uses rater ID `A` and who uses `B`. Each person completes all tasks, rather than splitting the sample between raters.
 2. Start with the blind form. Read each patch and select every directly supported taxonomy label. Expand a label to see its definition and decision rule. Record supporting evidence or explain why an empty label set is appropriate.
 3. In the security form, assess every highlighted matched line. The card includes eight lines of surrounding context on each side; the complete patch remains available on the left. Use additional context when needed and choose `uncertain` if the prior state cannot be established.
