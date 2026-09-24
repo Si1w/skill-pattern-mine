@@ -29,12 +29,12 @@
   "redaction": "Credential-shaped strings are replaced; task IDs and sample membership are unchanged.",
   "files": {
     "blind.html": {
-      "sha256": "c11ce4cb2b547da198a6b44b0cf7ece49d9525f24558c69c0caaee8cb6050bdb",
+      "sha256": "f4f433499d166d166b4a3fbaab0a6b7b971207ab1599dfba2442042ba8ffff2f",
       "run_id": "human-unseen-v2-20260923",
       "tasks": 293
     },
     "security.html": {
-      "sha256": "fa7fbda4ba3aa030fa2f99f03917b3094a2373e93893639694b0e05853a6ec4f",
+      "sha256": "62c8e8fb40063906edc62e4d4e4442412ad6e361b760d8d37818726723e1d500",
       "run_id": "human-unseen-v2-20260923",
       "tasks": 109
     }
