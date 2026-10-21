@@ -1,16 +1,14 @@
 """Behavioral fixtures for monthly endpoints and conservative origin evidence."""
 
-import base64
 import hashlib
 import json
 import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import parse_qs, urlsplit
 
-from src.domain import Fork, OriginEvidence, PackageFile, SourceCommit
 from src.config import load_config
+from src.domain import Fork, OriginEvidence, PackageFile, SourceCommit, TreeEntry
 from src.extract import (
     build_record,
     extract_monthly,
@@ -19,7 +17,6 @@ from src.extract import (
     patch_fingerprint,
 )
 from src.github import ApiError
-from test_github import page
 
 
 def blob(text):
@@ -245,11 +242,18 @@ class MonthlyTests(unittest.TestCase):
         )
 
 
-class MonthlyApi:
-    """Serve complete graphs and real blob hashes for an extraction fixture."""
+class FakeGitSource:
+    """Serve complete graphs and real blob hashes from in-memory fixtures.
+
+    Tree identifiers equal commit identifiers so that states can be looked up
+    by commit directly.
+    """
+
+    fetches = 0
+    cache_hits = 0
 
     def __init__(self, *, merge=False, overlap=False, corrupt=False, rename=False):
-        self.calls = []
+        self.blob_reads = []
         self.corrupt = corrupt
         self.commits = {
             "root": commit("root", date="2026-02-01T00:00:00Z"),
@@ -268,76 +272,35 @@ class MonthlyApi:
         if rename:
             for sha in ("one", "two"):
                 self.states[sha] = [
-                    item.model_copy(
-                        update={
-                            "path": item.path.replace("skills/demo/", "skills/renamed/")
-                        }
-                    )
+                    item.model_copy(update={"path": item.path.replace("skills/demo/", "skills/renamed/")})
                     for item in self.states[sha]
                 ]
-        self.contents = {
-            item.sha: item.content for files in self.states.values() for item in files
-        }
+        self.contents = {item.sha: item.content for files in self.states.values() for item in files}
 
-    def get(self, endpoint):
-        self.calls.append(endpoint)
-        path = urlsplit(endpoint).path
-        parameters = parse_qs(urlsplit(endpoint).query)
-        if path.endswith("/commits"):
-            head = parameters["sha"][0]
-            pending, seen = [head], set()
-            while pending:
-                sha = pending.pop()
-                if sha not in seen:
-                    seen.add(sha)
-                    pending.extend(self.commits[sha].parent_shas)
-            rows = []
-            for sha in sorted(seen, reverse=True):
-                item = self.commits[sha]
-                rows.append(
-                    {
-                        "sha": sha,
-                        "parents": [{"sha": parent} for parent in item.parent_shas],
-                        "author": None,
-                        "commit": {
-                            "tree": {"sha": sha},
-                            "author": {"date": item.author_date.isoformat()},
-                            "committer": {"date": item.committer_date.isoformat()},
-                            "message": "Fixture",
-                        },
-                    }
-                )
-            return page(rows)
-        if "/git/trees/" in path:
-            sha = path.rsplit("/", 1)[1]
-            return page(
-                {
-                    "truncated": False,
-                    "tree": [
-                        {
-                            "path": item.path,
-                            "sha": item.sha,
-                            "mode": item.mode,
-                            "type": "blob",
-                        }
-                        for item in self.states[sha]
-                    ],
-                }
-            )
-        if "/git/blobs/" in path:
-            sha = path.rsplit("/", 1)[1]
-            raw = self.contents[sha].encode()
-            return page(
-                {
-                    "sha": sha,
-                    "size": len(raw),
-                    "encoding": "base64",
-                    "content": base64.b64encode(
-                        b"wrong" if self.corrupt else raw
-                    ).decode(),
-                }
-            )
-        raise ApiError(f"Unexpected fixture endpoint: {endpoint}")
+    def ancestors(self, head):
+        pending, seen = [head], set()
+        while pending:
+            sha = pending.pop()
+            if sha not in seen:
+                seen.add(sha)
+                pending.extend(self.commits[sha].parent_shas)
+        return seen
+
+    def history(self, repository, head):
+        return {sha: self.commits[sha] for sha in self.ancestors(head)}
+
+    def tree(self, repository, tree_sha):
+        return [
+            TreeEntry(path=item.path, sha=item.sha, mode=item.mode, type="blob")
+            for item in self.states[tree_sha]
+        ]
+
+    def blob(self, repository, sha):
+        self.blob_reads.append(sha)
+        return b"wrong" if self.corrupt else self.contents[sha].encode()
+
+    def path_commits(self, repository, head, path):
+        return sorted(self.ancestors(head), reverse=True)
 
 
 class IntegrationTests(unittest.TestCase):
@@ -348,7 +311,6 @@ class IntegrationTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.config = load_config(Path("configs/skill-pattern-mine.yaml"))
-        self.config.extraction.history_backend = "github_api"
         self.fork = Fork(
             upstream="up/skills",
             full_name="user/skills",
@@ -372,61 +334,50 @@ class IntegrationTests(unittest.TestCase):
         )
 
     def test_full_flow_preserves_cancellation_and_replays_identically(self):
-        report = self.extract(MonthlyApi())
+        report = self.extract(FakeGitSource())
         self.assertEqual(report["status"], "passed", report)
         self.assertEqual(report["customization_candidates"], 1)
         self.assertEqual(report["no_net_change"], 1)
         self.assertEqual(report["input_scope"], "acquisition")
         first = (self.root / "monthly_records.jsonl").read_bytes()
-        self.extract(MonthlyApi())
+        self.extract(FakeGitSource())
         self.assertEqual(first, (self.root / "monthly_records.jsonl").read_bytes())
 
     def test_synchronization_inside_customization_month_is_excluded(self):
-        report = self.extract(MonthlyApi(merge=True))
+        report = self.extract(FakeGitSource(merge=True))
         self.assertEqual(report["status"], "passed", report)
         self.assertEqual(report["excluded_unresolved_upstream"], 1)
         self.assertEqual(report["customization_candidates"], 0)
 
-    def test_historical_paths_preserve_replay_and_parameter_checks(self):
-        self.extract(MonthlyApi())
+    def test_repeated_extraction_keeps_its_manifest_and_rejects_parameter_changes(self):
+        self.extract(FakeGitSource())
         manifest = self.root / "extraction.json"
-        saved = json.loads(manifest.read_text())
-        saved["settings"]["outputs"] = {
-            "data_root": "data/skill-pattern-mine",
-            "figures_root": "eval/tables-and-figures",
-        }
-        manifest.write_text(json.dumps(saved))
         original = manifest.read_bytes()
         records = (self.root / "monthly_records.jsonl").read_bytes()
-        self.assertEqual(self.extract(MonthlyApi())["status"], "passed")
+        self.assertEqual(self.extract(FakeGitSource())["status"], "passed")
         self.assertEqual(manifest.read_bytes(), original)
         self.assertEqual((self.root / "monthly_records.jsonl").read_bytes(), records)
         self.config.seed += 1
         with self.assertRaisesRegex(ValueError, "settings or references"):
-            self.extract(MonthlyApi())
+            self.extract(FakeGitSource())
 
     def test_equivalent_patch_with_different_sha_is_not_assigned_origin(self):
-        report = self.extract(MonthlyApi(overlap=True))
+        report = self.extract(FakeGitSource(overlap=True))
         self.assertEqual(report["excluded_unresolved_upstream"], 1)
         self.assertEqual(report["no_net_change"], 1)
 
     def test_corrupted_blob_is_failure_not_zero_change(self):
-        report = self.extract(MonthlyApi(corrupt=True))
+        report = self.extract(FakeGitSource(corrupt=True))
         self.assertEqual(report["status"], "failed")
         self.assertEqual(report["errors"], 1)
 
     def test_shared_blob_bytes_are_fetched_once_across_repositories(self):
-        client = MonthlyApi()
+        client = FakeGitSource()
         self.extract(client)
-        blobs = [
-            endpoint.rsplit("/", 1)[1]
-            for endpoint in client.calls
-            if "/git/blobs/" in endpoint
-        ]
-        self.assertEqual(len(blobs), len(set(blobs)))
+        self.assertEqual(len(client.blob_reads), len(set(client.blob_reads)))
 
     def test_feature_merge_uses_introduced_history_to_retain_candidate(self):
-        client = MonthlyApi()
+        client = FakeGitSource()
         client.commits["feature"] = commit("feature", "root", "2026-03-09T00:00:00Z")
         client.commits["two"].parent_shas.append("feature")
         client.states["one"] = package("original\n")
@@ -441,7 +392,7 @@ class IntegrationTests(unittest.TestCase):
         )
 
     def test_feature_merge_with_replayed_upstream_patch_is_unresolved(self):
-        client = MonthlyApi()
+        client = FakeGitSource()
         client.commits["feature"] = commit("feature", "root", "2026-03-09T00:00:00Z")
         client.commits["two"].parent_shas.append("feature")
         client.states["one"] = package("original\n")
@@ -453,16 +404,16 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(report["no_net_change"], 0)
 
     def test_package_move_requires_identity_review(self):
-        report = self.extract(MonthlyApi(rename=True))
+        report = self.extract(FakeGitSource(rename=True))
         self.assertEqual(report["records"], 0)
         self.assertEqual(report["omissions"]["unestablished_package_identity"], 2)
         self.assertEqual(report["errors"], 0)
 
     def test_changed_extraction_scope_cannot_reuse_run(self):
-        self.extract(MonthlyApi())
+        self.extract(FakeGitSource())
         with self.assertRaisesRegex(ValueError, "settings or references"):
             extract_monthly(
-                MonthlyApi(),
+                FakeGitSource(),
                 self.config,
                 self.root,
                 [(self.fork, "up")],
@@ -472,7 +423,7 @@ class IntegrationTests(unittest.TestCase):
             )
 
     def test_later_upstream_integration_remains_ambiguous(self):
-        client = MonthlyApi()
+        client = FakeGitSource()
         client.commits["up"] = commit("up", "one", "2026-04-05T00:00:00Z")
         report = self.extract(client)
         self.assertEqual(report["excluded_unresolved_upstream"], 1)
@@ -480,7 +431,7 @@ class IntegrationTests(unittest.TestCase):
         self.assertIn("one", row["origin_evidence"][0]["matching_upstream_shas"])
 
     def test_pure_upstream_sync_is_not_customization_activity(self):
-        client = MonthlyApi(merge=True)
+        client = FakeGitSource(merge=True)
         client.states["one"] = package("original\n")
         report = self.extract(client)
         self.assertEqual(report["customization_candidates"], 0)
@@ -488,23 +439,20 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(report["errors"], 0)
 
     def test_merge_outside_package_does_not_exclude_its_month(self):
-        client = MonthlyApi(merge=True)
+        client = FakeGitSource(merge=True)
         client.states["two"] = package("custom\n")
         report = self.extract(client)
         self.assertEqual(report["customization_candidates"], 1)
         self.assertEqual(report["excluded_unresolved_upstream"], 0)
 
     def test_missing_ancestor_is_reported_as_failure(self):
-        client = MonthlyApi()
-        original_get = client.get
+        client = FakeGitSource()
+        complete = client.history
 
-        def missing_root(endpoint):
-            response = original_get(endpoint)
-            if urlsplit(endpoint).path.endswith("/commits"):
-                response.body = [row for row in response.body if row["sha"] != "root"]
-            return response
+        def without_root(repository, head):
+            return {sha: row for sha, row in complete(repository, head).items() if sha != "root"}
 
-        client.get = missing_root
+        client.history = without_root
         report = self.extract(client)
         self.assertEqual(report["status"], "failed")
         self.assertEqual(report["records"], 0)

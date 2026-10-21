@@ -1,17 +1,93 @@
-"""Regression checks for unstable fork inventories and evidence recovery."""
+"""Fork enumeration, frozen comparisons and inventory consistency."""
 
-import hashlib
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
-from src.acquisition import import_recovery_cache, prepare_run, verify_run
 from src.config import load_config
-from src.github import ApiError, read_jsonl, write_json
-from src.retrieve import retrieve_forks, retrieve_repositories
+from src.domain import Fork
+from src.forks import compare_fork, retrieve_forks
+from src.github import ApiError
+from src.repositories import retrieve_repositories
+from src.run import prepare_run
+from src.storage import read_jsonl, write_json
+from src.verify import verify_run
 from test_acquisition import FixtureClient
-from test_github import page
+from test_github import Pages, page
+
+
+def fork(sha="head"):
+    return Fork(
+        upstream="a/b",
+        full_name="c/b",
+        owner="c",
+        created_at="2026-08-01T00:00:00Z",
+        pushed_at="2026-09-01T00:00:00Z",
+        retrieved_at="2026-09-16T00:00:00Z",
+        default_branch="main",
+        default_branch_sha=sha,
+    )
+
+
+def commit(sha, parents):
+    return {
+        "sha": sha,
+        "parents": [{"sha": parent} for parent in parents],
+        "author": None,
+        "commit": {
+            "tree": {"sha": "tree"},
+            "author": {"date": "2026-08-31T23:00:00Z"},
+            "committer": {"date": "2026-09-01T00:00:00Z"},
+            "message": "A change",
+        },
+    }
+
+
+class ComparisonTests(unittest.TestCase):
+    """Comparisons use immutable SHAs and preserve dates and parent order."""
+
+    def test_comparison_preserves_source_metadata(self):
+        client = Pages({
+            "repos/c/b/compare/base...head?per_page=100": page({
+                "status": "ahead",
+                "ahead_by": 1,
+                "behind_by": 0,
+                "merge_base_commit": {"sha": "base"},
+                "commits": [commit("new", ["first", "second"])],
+            })
+        })
+        result = compare_fork(client, fork(), 3, "base", per_page=100, limit=None)
+        self.assertTrue(result.commits_complete)
+        self.assertEqual(result.commits[0].parent_shas, ["first", "second"])
+        self.assertNotEqual(result.commits[0].author_date, result.commits[0].committer_date)
+        self.assertIsNone(result.commits[0].author_login)
+
+    def test_comparison_follows_next_link_and_checks_total(self):
+        first = "repos/c/b/compare/base...head?per_page=1"
+        second = first + "&page=2"
+        metadata = {"status": "ahead", "ahead_by": 2, "behind_by": 0, "merge_base_commit": {"sha": "base"}}
+        client = Pages({
+            first: page({**metadata, "commits": [commit("one", [])]}, "https://api.github.com/" + second),
+            second: page({**metadata, "commits": [commit("two", [])]}),
+        })
+        result = compare_fork(client, fork(), 3, "base", per_page=1, limit=None)
+        self.assertTrue(result.commits_complete)
+        self.assertEqual([item.sha for item in result.commits], ["one", "two"])
+        self.assertIn(second, client.calls)
+
+    def test_missing_comparison_commits_are_an_error(self):
+        client = Pages({
+            "repos/c/b/compare/base...head?per_page=100": page({
+                "status": "ahead",
+                "ahead_by": 1,
+                "behind_by": 0,
+                "merge_base_commit": {"sha": "base"},
+                "commits": [],
+            })
+        })
+        with self.assertRaises(ApiError):
+            compare_fork(client, fork(), 3, "base", per_page=100, limit=None)
 
 
 class InventoryTests(unittest.TestCase):
@@ -56,56 +132,6 @@ class InventoryTests(unittest.TestCase):
         coverage = json.loads((self.root / "fork_coverage.json").read_text())[0]
         self.assertEqual(coverage["creation_time_inversions"], 1)
         self.assertFalse(coverage["complete"])
-
-    def test_missing_previous_identity_is_not_silently_dropped(self):
-        write_json(self.root / "recovery_inventory.json", {
-            "owner/skills": [{"id": 999, "full_name": "missing/skills"}]
-        })
-        retrieve_forks(FixtureClient(), self.config, self.root, limit=None, pilot=True)
-        coverage = json.loads((self.root / "fork_coverage.json").read_text())[0]
-        self.assertEqual(coverage["missing_previous_ids"], [999])
-        self.assertFalse(coverage["complete"])
-        self.assertEqual(len(read_jsonl(self.root / "forks.jsonl")), 2)
-        self.assertEqual(len(read_jsonl(self.root / "fork_errors.jsonl")), 1)
-        self.assertEqual(verify_run(self.root)["status"], "failed")
-
-    def test_missing_accessible_fork_is_reconciled_only_with_network_evidence(self):
-        write_json(self.root / "recovery_inventory.json", {
-            "owner/skills": [{"id": 999, "full_name": "renamed/skills"}]
-        })
-
-        class MissingClient(FixtureClient):
-            def get(self, endpoint):
-                if endpoint == "repositories/999":
-                    body = super().get("repos/same/skills").body
-                    return page({**body, "id": 999, "full_name": "renamed/skills", "parent": {"id": 1}})
-                return super().get(endpoint)
-
-        retrieve_forks(MissingClient(), self.config, self.root, limit=None, pilot=True)
-        coverage = json.loads((self.root / "fork_coverage.json").read_text())[0]
-        self.assertEqual(coverage["reconciled_ids"], [999])
-        self.assertEqual(coverage["missing_previous_ids"], [])
-        self.assertTrue(coverage["complete"])
-        self.assertEqual(len(read_jsonl(self.root / "forks.jsonl")), 3)
-        self.assertEqual(read_jsonl(self.root / "fork_errors.jsonl"), [])
-
-    def test_missing_id_in_another_network_remains_an_error(self):
-        write_json(self.root / "recovery_inventory.json", {
-            "owner/skills": [{"id": 999, "full_name": "other/skills"}]
-        })
-
-        class ForeignClient(FixtureClient):
-            def get(self, endpoint):
-                if endpoint == "repositories/999":
-                    body = super().get("repos/same/skills").body
-                    return page({**body, "id": 999, "parent": {"id": 888}, "source": {"id": 888}})
-                return super().get(endpoint)
-
-        retrieve_forks(ForeignClient(), self.config, self.root, limit=None, pilot=True)
-        coverage = json.loads((self.root / "fork_coverage.json").read_text())[0]
-        self.assertEqual(coverage["missing_previous_ids"], [999])
-        self.assertEqual(coverage["reconciled_ids"], [])
-        self.assertEqual(len(read_jsonl(self.root / "forks.jsonl")), 2)
 
     def test_metadata_404_recovers_by_same_numeric_identity(self):
         class RenamedClient(FixtureClient):
@@ -160,16 +186,16 @@ class InventoryTests(unittest.TestCase):
             def get(self, endpoint):
                 if "/forks?" in endpoint:
                     template = super().get(endpoint).body[0]
-                    return page([
-                        {**template, "id": n, "full_name": f"f{n}/skills"}
-                        for n in range(250)
-                    ] + [{**template, "id": 250, "full_name": "interrupt/skills"}])
+                    return page(
+                        [{**template, "id": n, "full_name": f"f{n}/skills"} for n in range(250)]
+                        + [{**template, "id": 250, "full_name": "interrupt/skills"}]
+                    )
                 if endpoint == "repos/interrupt/skills":
                     raise KeyboardInterrupt
                 if endpoint.startswith("repos/f") and endpoint.count("/") == 2:
                     body = super().get("repos/fork/skills").body
                     name = endpoint.removeprefix("repos/")
-                    return page({**body, "id": int(name.split('/')[0][1:]), "full_name": name})
+                    return page({**body, "id": int(name.split("/")[0][1:]), "full_name": name})
                 return super().get(endpoint)
 
         with self.assertRaises(KeyboardInterrupt):
@@ -178,106 +204,6 @@ class InventoryTests(unittest.TestCase):
         summary = json.loads((self.root / "fork_summary.json").read_text())
         self.assertEqual(summary["upstreams_processed"], 0)
         self.assertFalse(summary["complete"])
-
-
-class RecoveryTests(unittest.TestCase):
-    """A new order must retain original settings and attributable raw evidence."""
-
-    def setUp(self):
-        self.temp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.temp.cleanup)
-        self.source = Path(self.temp.name) / "original"
-        self.root = Path(self.temp.name) / "recovered"
-        self.config = load_config(Path("configs/skill-pattern-mine.yaml"))
-        self.config.retrieval.fork_sort = "stargazers"
-        self.original = prepare_run(self.source, self.config, pilot=False, limit=None,
-                                    offline=False, source_run_id="candidates")
-        self.config.retrieval.fork_sort = "oldest"
-
-    def prepare(self, **kwargs):
-        return prepare_run(self.root, self.config, pilot=None, limit=None, offline=False,
-                           recovery_run_id=self.source.name, **kwargs)
-
-    def cache(self, endpoint, body):
-        version = self.config.github.api_version
-        digest = hashlib.sha256(f"{version}:{endpoint}".encode()).hexdigest()
-        path = self.source / "raw" / f"{digest}.json"
-        write_json(path, {"endpoint": endpoint, "api_version": version, "status": 200,
-                          "retrieved_at": "2026-09-22T14:48:04Z", "headers": {}, "body": body})
-        return path
-
-    def test_recovery_preserves_cutoff_source_and_allows_only_order_change(self):
-        run = self.prepare()
-        self.assertEqual(run["cutoff_utc"], self.original["cutoff_utc"])
-        self.assertEqual(run["source_run_id"], "candidates")
-        self.assertEqual(run["config"]["retrieval"]["fork_sort"], "oldest")
-        self.assertEqual(json.loads((self.source / "run.json").read_text()), self.original)
-
-    def test_recovery_rejects_changed_research_parameters(self):
-        self.config.seed = 123
-        with self.assertRaisesRegex(ValueError, "research settings"):
-            self.prepare()
-        self.assertFalse((self.root / "run.json").exists())
-
-    def test_cache_import_preserves_bytes_but_never_reuses_listing(self):
-        self.prepare()
-        (self.source / "repositories.jsonl").write_text(json.dumps({
-            "github_id": 1, "repository": {"full_name": "owner/skills"}
-        }) + '\n')
-        metadata = self.cache("repos/fork/skills", {"id": 3})
-        listing = self.cache("repositories/1/forks?per_page=100&sort=stargazers", [
-            {"id": 3, "full_name": "fork/skills"}, {"id": 3, "full_name": "fork/skills"}
-        ])
-        report = import_recovery_cache(self.source, self.root)
-        self.assertEqual(report["responses"], 1)
-        self.assertEqual(report["known_forks"], {"owner/skills": 1})
-        self.assertEqual((self.root / "raw" / metadata.name).read_bytes(), metadata.read_bytes())
-        self.assertFalse((self.root / "raw" / listing.name).exists())
-        self.assertEqual(import_recovery_cache(self.source, self.root), report)
-
-    def test_cache_filename_mismatch_is_rejected(self):
-        self.prepare()
-        path = self.cache("repos/fork/skills", {"id": 3})
-        path.rename(path.with_name("wrong.json"))
-        with self.assertRaisesRegex(ValueError, "request identity"):
-            import_recovery_cache(self.source, self.root)
-
-    def test_same_creation_order_reuses_listing_and_retains_prior_missing_ids(self):
-        run = json.loads((self.source / "run.json").read_text())
-        run["config"]["retrieval"]["fork_sort"] = "oldest"
-        write_json(self.source / "run.json", run)
-        (self.source / "repositories.jsonl").write_text(json.dumps({
-            "github_id": 1, "repository": {"full_name": "owner/skills"}
-        }) + '\n')
-        write_json(self.source / "recovery_inventory.json", {
-            "owner/skills": [{"id": 999, "full_name": "missing/skills"}]
-        })
-        self.prepare()
-        listing = self.cache("repositories/1/forks?per_page=100&sort=oldest", [
-            {"id": 3, "full_name": "fork/skills"}
-        ])
-        report = import_recovery_cache(self.source, self.root)
-        self.assertEqual(report["listing_pages"], 1)
-        self.assertEqual((self.root / "raw" / listing.name).read_bytes(), listing.read_bytes())
-        self.assertEqual(report["known_forks"], {"owner/skills": 2})
-        self.assertNotIn("response_sha256", report)
-
-    def test_recovery_preserves_404_for_offline_skip_replay(self):
-        self.prepare()
-        path = self.cache("repositories/999", {"message": "Not Found"})
-        saved = json.loads(path.read_text())
-        saved["status"] = 404
-        write_json(path, saved)
-        report = import_recovery_cache(self.source, self.root)
-        self.assertEqual(report["responses"], 1)
-        self.assertEqual((self.root / "raw" / path.name).read_bytes(), path.read_bytes())
-
-    def test_recovery_never_overwrites_a_different_frozen_response(self):
-        self.prepare()
-        path = self.cache("repos/fork/skills", {"id": 3})
-        write_json(self.root / "raw" / path.name, {"different": True})
-        with self.assertRaisesRegex(ValueError, "overwrite frozen"):
-            import_recovery_cache(self.source, self.root)
 
 
 if __name__ == "__main__":

@@ -5,10 +5,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.acquisition import import_confirmed_repositories, prepare_run, verify_run
 from src.config import RepositoryReview, load_config
-from src.github import read_jsonl, write_jsonl
-from src.retrieve import retrieve_forks, retrieve_repositories
+from src.forks import retrieve_forks
+from src.repositories import import_confirmed_repositories, retrieve_repositories
+from src.run import prepare_run
+from src.storage import read_jsonl, write_jsonl
+from src.verify import verify_run
 from test_acquisition import FixtureClient
 
 

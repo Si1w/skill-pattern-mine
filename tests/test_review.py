@@ -7,7 +7,7 @@ from pathlib import Path
 
 import yaml
 
-from src.github import write_json, write_jsonl
+from src.storage import write_json, write_jsonl
 from src.review import export_repository_review
 
 

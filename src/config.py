@@ -1,4 +1,4 @@
-"""Load and validate acquisition settings from the experiment YAML file."""
+"""Load and validate experiment settings from the YAML file."""
 
 from pathlib import Path
 from typing import Literal
@@ -18,7 +18,6 @@ class GitHubSettings(Settings):
 
     api_version: str
     per_page: int = Field(ge=1, le=100)
-    branch_scope: Literal["frozen_default_branch"]
     max_attempts: int = Field(default=3, ge=1, le=10)
     timeout_seconds: int = Field(default=60, ge=1, le=60)
 
@@ -43,14 +42,12 @@ class RetrievalSettings(Settings):
 
 
 class ObservationSettings(Settings):
-    """Observation bounds; collection may also retain metadata outside them."""
+    """Observation bounds; months are assigned by UTC committer time (ADR 0015)."""
 
-    timestamp_field: Literal["commit.committer.date"]
-    timezone: Literal["UTC"]
-    start: Literal["earliest_eligible_modification"]
     end_exclusive_cap: AwareDatetime
-    cutoff_utc: AwareDatetime | None
-    include_partial_final_month: Literal[True]
+    cutoff_utc: AwareDatetime | None = Field(
+        description="Fixed cutoff; None freezes the acquisition start time instead."
+    )
 
 
 class RepositoryReview(Settings):
@@ -60,37 +57,47 @@ class RepositoryReview(Settings):
     exclude: bool = False
     reason: str = Field(min_length=1)
 
+    @property
+    def approved(self) -> bool:
+        """A repository enters the confirmed cohort only with an explicit approval."""
+        return not self.exclude and not self.is_aggregator
+
 
 class ScreeningSettings(Settings):
-    """Formal inclusion requires a calibrated threshold and manual review."""
+    """Formal inclusion requires a calibrated threshold or confirmed reviews."""
 
     minimum_forks: int = Field(ge=0)
     selection_mode: Literal["calibrated_ratio", "confirmed_reviews"] = "calibrated_ratio"
     sensitivity_fork_thresholds: list[int]
-    skill_centricity_metric: Literal["tracked_package_blobs_over_all_tracked_blobs"]
     skill_centricity_threshold: float | None = Field(ge=0, le=1)
     reviews: dict[str, RepositoryReview] = Field(default_factory=dict)
 
+    @property
+    def lowest_fork_threshold(self) -> int:
+        """Candidates are kept down to the lowest sensitivity threshold."""
+        return min([self.minimum_forks, *self.sensitivity_fork_thresholds])
 
-class AnalysisSettings(Settings):
-    """Approved policy reserved for the later monthly analysis."""
+    def review_for(self, full_name: str) -> RepositoryReview | None:
+        """Look up a review by repository name, ignoring case."""
+        for name, review in self.reviews.items():
+            if name.lower() == full_name.lower():
+                return review
+        return None
 
-    unresolved_upstream_policy: Literal["exclude_from_main"]
-    analyze_excluded_intervals: Literal[False]
+    def approved_repositories(self) -> set[str]:
+        """Lower case names of the repositories approved by human review."""
+        return {name.lower() for name, review in self.reviews.items() if review.approved}
 
 
 class ExtractionSettings(Settings):
-    """Limits and operational rules for monthly endpoint extraction."""
+    """Limits for monthly endpoint extraction from local Git history."""
 
     maximum_blob_bytes: int = Field(default=10485760, ge=1)
-    lineage: Literal["first_parent"] = "first_parent"
-    origin_policy: Literal["conservative_overlap"] = "conservative_overlap"
-    history_backend: Literal["github_api", "pydriller"] = "github_api"
     git_timeout_seconds: int = Field(default=180, ge=1)
 
 
 class ExperimentSettings(Settings):
-    """The configuration frozen into every acquisition run."""
+    """The configuration frozen into every run."""
 
     dataset: str
     seed: int
@@ -98,17 +105,9 @@ class ExperimentSettings(Settings):
     retrieval: RetrievalSettings
     observation: ObservationSettings
     screening: ScreeningSettings
-    analysis: AnalysisSettings
     extraction: ExtractionSettings = Field(default_factory=ExtractionSettings)
 
 
 def load_config(path: Path) -> ExperimentSettings:
     """Read YAML safely and validate all known fields."""
     return ExperimentSettings.model_validate(yaml.safe_load(path.read_text()))
-
-
-def load_saved_config(snapshot: dict) -> ExperimentSettings:
-    """Read historical settings without retired output paths or artifact changes."""
-    return ExperimentSettings.model_validate(
-        {key: value for key, value in snapshot.items() if key != "outputs"}
-    )

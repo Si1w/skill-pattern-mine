@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 
-from src.github import read_jsonl
+from src.storage import read_jsonl
 
 
 def export_repository_review(root: Path) -> dict:

@@ -7,10 +7,13 @@ from pathlib import Path
 from unittest.mock import patch
 from urllib.parse import urlsplit
 
-from src.acquisition import prepare_run, verify_run
 from src.config import load_config
-from src.github import ApiError, GitHubClient, read_jsonl
-from src.retrieve import retrieve_forks, retrieve_repositories
+from src.forks import retrieve_forks
+from src.github import ApiError, GitHubClient
+from src.repositories import retrieve_repositories
+from src.run import prepare_run
+from src.storage import read_jsonl
+from src.verify import verify_run
 from test_github import page
 
 BASE = "a" * 40
@@ -220,24 +223,6 @@ class AcquisitionTests(unittest.TestCase):
     def test_offline_cannot_create_a_run(self):
         with self.assertRaisesRegex(ValueError, "existing run"):
             prepare_run(self.root, self.config, pilot=True, limit=2, offline=True)
-
-    def test_historical_paths_do_not_block_resume_or_hide_parameter_changes(self):
-        saved = prepare_run(self.root, self.config, pilot=True, limit=2, offline=False)
-        saved["config"]["outputs"] = {
-            "data_root": "data/skill-pattern-mine",
-            "figures_root": "eval/tables-and-figures",
-        }
-        path = self.root / "run.json"
-        path.write_text(json.dumps(saved))
-        original = path.read_bytes()
-        self.assertEqual(
-            prepare_run(self.root, self.config, pilot=None, limit=None, offline=True),
-            saved,
-        )
-        self.assertEqual(path.read_bytes(), original)
-        self.config.seed += 1
-        with self.assertRaisesRegex(ValueError, "Configuration changed"):
-            prepare_run(self.root, self.config, pilot=None, limit=None, offline=True)
 
     def test_missing_outputs_cannot_pass_acceptance(self):
         prepare_run(self.root, self.config, pilot=True, limit=2, offline=False)

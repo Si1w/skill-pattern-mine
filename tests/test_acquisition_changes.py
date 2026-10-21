@@ -7,10 +7,14 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from src.acquisition import load_extraction_inputs, prepare_run, verify_run
 from src.config import load_config
-from src.github import ApiError, GitHubClient, read_jsonl, write_json, write_jsonl
-from src.retrieve import retrieve_forks, retrieve_repositories
+from src.extract import load_extraction_inputs
+from src.forks import retrieve_forks
+from src.github import ApiError, GitHubClient
+from src.repositories import retrieve_repositories
+from src.run import prepare_run
+from src.storage import read_jsonl, write_json, write_jsonl
+from src.verify import verify_run
 from test_acquisition import BASE, HEAD, FixtureClient
 from test_github import page
 
@@ -46,28 +50,6 @@ class AcquisitionChangesTests(unittest.TestCase):
                 self.assertEqual(verify_run(self.root)["status"], "passed")
                 inputs = load_extraction_inputs(self.root, self.run)
                 self.assertEqual([fork.full_name for fork, _ in inputs], ["same/skills"])
-
-    def test_missing_inventory_404_is_skipped_but_other_failures_block(self):
-        write_json(self.root / "recovery_inventory.json", {
-            "owner/skills": [{"id": 999, "full_name": "missing/skills"}]
-        })
-        for status in (404, 403, 500):
-            with self.subTest(status=status):
-                class MissingClient(FixtureClient):
-                    def get(self, endpoint):
-                        if endpoint == "repositories/999":
-                            raise ApiError("Unavailable", status=status)
-                        return super().get(endpoint)
-
-                retrieve_forks(MissingClient(), self.config, self.root, limit=None, pilot=True)
-                report = verify_run(self.root)
-                self.assertEqual(report["status"], "passed" if status == 404 else "failed")
-                coverage = json.loads((self.root / "fork_coverage.json").read_text())[0]
-                self.assertEqual(coverage["missing_previous_ids"], [999])
-                if status == 404:
-                    self.assertEqual(report["skipped_forks"], 1)
-                    write_jsonl(self.root / "fork_skips.jsonl", [])
-                    self.assertEqual(verify_run(self.root)["status"], "failed")
 
     def test_upstream_listing_404_still_fails(self):
         class MissingClient(FixtureClient):
@@ -159,7 +141,7 @@ class AcquisitionChangesTests(unittest.TestCase):
         self.assertFalse((self.root / "extraction.json").exists())
         self.assertEqual(len(load_extraction_inputs(self.root, self.run, allow_partial=True)), 2)
         with self.assertRaisesRegex(ValueError, "pilot"):
-            load_extraction_inputs(self.root, {**self.run, "pilot": False}, allow_partial=True)
+            load_extraction_inputs(self.root, self.run.model_copy(update={"pilot": False}), allow_partial=True)
 
     def test_finished_but_invalid_collection_cannot_start_normal_extraction(self):
         retrieve_forks(FixtureClient(), self.config, self.root, limit=None, pilot=True)

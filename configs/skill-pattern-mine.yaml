@@ -5,7 +5,6 @@ seed: 42
 github:
   api_version: "2026-03-10"
   per_page: 100
-  branch_scope: frozen_default_branch
   max_attempts: 3
   timeout_seconds: 60
 
@@ -26,18 +25,15 @@ retrieval:
   fork_sort: oldest
 
 observation:
-  timestamp_field: commit.committer.date
-  timezone: UTC
-  start: earliest_eligible_modification
+  # Months are assigned by GitHub committer time in UTC (ADR 0015); the final partial month is kept (ADR 0016).
   end_exclusive_cap: "2026-10-01T00:00:00Z"
   cutoff_utc: null  # Freeze at acquisition start; never infer from wall time on resume.
-  include_partial_final_month: true
 
 screening:
   selection_mode: confirmed_reviews
   minimum_forks: 1000
   sensitivity_fork_thresholds: [500, 2000]
-  skill_centricity_metric: tracked_package_blobs_over_all_tracked_blobs
+  # The ratio is tracked package blobs over all tracked blobs (ADR 0017).
   skill_centricity_threshold: null  # Unused for the confirmed cohort; never infer a cutoff.
   reviews:
     github/awesome-copilot:
@@ -216,13 +212,8 @@ screening:
       reason: User excluded archify on 2026-09-22 after reviewing its Node.js rendering and validation system, standalone
         CLI, and skill interface; it is outside the selected repository purpose boundary.
 
-analysis:
-  unresolved_upstream_policy: exclude_from_main
-  analyze_excluded_intervals: false
-
 extraction:
-  history_backend: pydriller
+  # Histories come from PyDriller and GitPython (ADR 0023); lineage follows first parents and
+  # intervals with unresolved upstream origin are excluded from the main analysis (ADR 0018, 0020).
   git_timeout_seconds: 180
   maximum_blob_bytes: 10485760
-  lineage: first_parent
-  origin_policy: conservative_overlap

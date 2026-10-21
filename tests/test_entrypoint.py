@@ -6,10 +6,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from src.acquisition import prepare_run
 from src.config import load_config
-from src.github import write_json
-from src.retrieve import retrieve_forks, retrieve_repositories
+from src.forks import retrieve_forks
+from src.repositories import retrieve_repositories
+from src.run import prepare_run
+from src.storage import write_json
 from test_acquisition import FixtureClient
 
 PROJECT = Path(__file__).resolve().parents[1]
@@ -36,7 +37,7 @@ class ExtractionCommandTests(unittest.TestCase):
             patch.object(ENTRY, "extract_monthly") as extract,
         ):
             extract.return_value = {
-                "status": "passed", "history_backend": "pydriller", "git_fetches": 0,
+                "status": "passed", "git_fetches": 0,
                 "git_cache_hits": 0, "errors": 0, "records": 1,
                 "customization_candidates": 1, "excluded_unresolved_upstream": 0,
             }

@@ -1,12 +1,12 @@
-"""Behavioral checks for complete trees, screening and frozen fork histories."""
+"""Behavioral checks for complete trees and repository screening."""
 
 import unittest
 from datetime import datetime, timezone
 
 from src.config import RepositoryReview, ScreeningSettings
 from src.domain import Repository, RetrievalChannel
-from src.retrieve import complete_tree, compare_fork, screen_repository
 from src.github import ApiError
+from src.repositories import complete_tree, screen_repository
 from test_github import Pages, page
 
 
@@ -77,7 +77,6 @@ class ScreeningTests(unittest.TestCase):
         self.config = ScreeningSettings(
             minimum_forks=1000,
             sensitivity_fork_thresholds=[500, 2000],
-            skill_centricity_metric="tracked_package_blobs_over_all_tracked_blobs",
             skill_centricity_threshold=None,
         )
         self.entries = [entry("skills/one/SKILL.md"), entry("README.md")]
@@ -142,130 +141,6 @@ class ScreeningTests(unittest.TestCase):
         result = self.screen()
         self.assertEqual(result.excluded_by, "aggregator")
         self.assertIn("pointers", result.exclusion_note)
-
-
-class ComparisonTests(unittest.TestCase):
-    """Comparisons use immutable SHAs and preserve dates and parent order."""
-
-    def test_comparison_preserves_source_metadata(self):
-        from src.domain import Fork
-
-        fork = Fork(
-            upstream="a/b",
-            full_name="c/b",
-            owner="c",
-            created_at="2026-08-01T00:00:00Z",
-            pushed_at="2026-09-01T00:00:00Z",
-            retrieved_at="2026-09-16T00:00:00Z",
-            default_branch="main",
-            default_branch_sha="head",
-        )
-        commit = {
-            "sha": "new",
-            "parents": [{"sha": "first"}, {"sha": "second"}],
-            "author": None,
-            "commit": {
-                "tree": {"sha": "tree"},
-                "author": {"date": "2026-08-31T23:00:00Z"},
-                "committer": {"date": "2026-09-01T00:00:00Z"},
-                "message": "A change",
-            },
-        }
-        client = Pages(
-            {
-                "repos/c/b/compare/base...head?per_page=100": page(
-                    {
-                        "status": "ahead",
-                        "ahead_by": 1,
-                        "behind_by": 0,
-                        "merge_base_commit": {"sha": "base"},
-                        "commits": [commit],
-                    }
-                )
-            }
-        )
-        result = compare_fork(client, fork, 3, "base", per_page=100, limit=None)
-        self.assertTrue(result.commits_complete)
-        self.assertEqual(result.commits[0].parent_shas, ["first", "second"])
-        self.assertNotEqual(
-            result.commits[0].author_date, result.commits[0].committer_date
-        )
-        self.assertIsNone(result.commits[0].author_login)
-
-    def test_comparison_follows_next_link_and_checks_total(self):
-        from src.domain import Fork
-
-        fork = Fork(
-            upstream="a/b",
-            full_name="c/b",
-            owner="c",
-            created_at="2026-08-01T00:00:00Z",
-            pushed_at="2026-09-01T00:00:00Z",
-            retrieved_at="2026-09-16T00:00:00Z",
-            default_branch="main",
-            default_branch_sha="head",
-        )
-        commit = {
-            "sha": "one",
-            "parents": [],
-            "author": None,
-            "commit": {
-                "tree": {"sha": "tree"},
-                "author": {"date": "2026-08-31T23:00:00Z"},
-                "committer": {"date": "2026-09-01T00:00:00Z"},
-                "message": "A change",
-            },
-        }
-        first = "repos/c/b/compare/base...head?per_page=1"
-        second = first + "&page=2"
-        metadata = {
-            "status": "ahead",
-            "ahead_by": 2,
-            "behind_by": 0,
-            "merge_base_commit": {"sha": "base"},
-        }
-        client = Pages(
-            {
-                first: page(
-                    {**metadata, "commits": [commit]},
-                    "https://api.github.com/" + second,
-                ),
-                second: page({**metadata, "commits": [{**commit, "sha": "two"}]}),
-            }
-        )
-        result = compare_fork(client, fork, 3, "base", per_page=1, limit=None)
-        self.assertTrue(result.commits_complete)
-        self.assertEqual([item.sha for item in result.commits], ["one", "two"])
-        self.assertIn(second, client.calls)
-
-    def test_missing_comparison_commits_are_an_error(self):
-        from src.domain import Fork
-
-        fork = Fork(
-            upstream="a/b",
-            full_name="c/b",
-            owner="c",
-            created_at="2026-08-01T00:00:00Z",
-            pushed_at="2026-09-01T00:00:00Z",
-            retrieved_at="2026-09-16T00:00:00Z",
-            default_branch="main",
-            default_branch_sha="head",
-        )
-        client = Pages(
-            {
-                "repos/c/b/compare/base...head?per_page=100": page(
-                    {
-                        "status": "ahead",
-                        "ahead_by": 1,
-                        "behind_by": 0,
-                        "merge_base_commit": {"sha": "base"},
-                        "commits": [],
-                    }
-                )
-            }
-        )
-        with self.assertRaises(ApiError):
-            compare_fork(client, fork, 3, "base", per_page=100, limit=None)
 
 
 if __name__ == "__main__":

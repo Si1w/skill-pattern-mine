@@ -218,7 +218,7 @@ class ForkSkip(BaseModel):
     upstream: str
     github_id: int
     full_name: str
-    stage: Literal["fork_reconciliation", "fork_metadata", "fork_branch", "fork_comparison"]
+    stage: Literal["fork_metadata", "fork_branch", "fork_comparison"]
     status: Literal[404] = 404
     reason: Literal["http_404"] = "http_404"
     message: str
@@ -260,39 +260,6 @@ class FileChange(BaseModel):
     mode_after: str | None = None
     encoding_before: Literal["utf-8", "base64", "gitlink"] | None = None
     encoding_after: Literal["utf-8", "base64", "gitlink"] | None = None
-
-
-class Commit(BaseModel):
-    """One source commit from a fork's frozen default branch history.
-
-    Retained for endpoint construction and traceability, not directly labeled.
-    Filtering and the treatment of merge parents remain separate design decisions.
-    """
-
-    upstream: str
-    fork_owner: str
-    fork_branch: str
-    sha: str
-    author_date: AwareDatetime = Field(
-        description="GitHub commit.author.date, preserved with its UTC offset as provenance."
-    )
-    committer_date: AwareDatetime = Field(
-        description="GitHub commit.committer.date; convert to UTC for month membership (ADR 0015)."
-    )
-    parent_shas: list[str] = Field(
-        description="GitHub parents[].sha in response order; empty for a root commit."
-    )
-    message: str = Field(
-        description="Raw message; footers are kept so authorship trailers stay available."
-    )
-    is_mechanical: bool = Field(
-        description="Recorded maintenance flag; commit kind alone does not establish exclusion."
-    )
-    is_bot: bool = Field(description="Author matched a bot heuristic (ADR 0003).")
-    is_translation: bool = Field(
-        description="Change limited to translation; kept out of the main analysis (ADR 0003)."
-    )
-    files: list[FileChange]
 
 
 class SecurityMatch(BaseModel):
