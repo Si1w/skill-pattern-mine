@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+.ruff_cache/
+
+# Environment
+.env
+.venv/
+
+# HPC
+*.out
+*.log
+*.err
+
+# OS
+.DS_Store
+
+# Benchmark run results
+data/
+
+# Overleaf paper submodule checkout
+paper/
+
+# Repository
+legacy/src/audit/tasks.js
+legacy/src/msg/tasks.js
+
+# Independent ratings stay private until adjudication.
+legacy/annotation/blind-*.json
+legacy/annotation/security-*.json
+legacy/annotation/ratings/
