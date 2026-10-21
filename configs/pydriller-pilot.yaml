@@ -1,3 +1,0 @@
-repetitions: 3
-git_timeout_seconds: 180
-sample_keys: [excluded_example, candidate]
