@@ -236,20 +236,20 @@ def sample_bounds_respected(a: Artifacts) -> bool:
     limit = a.run.num_samples
     if limit is None:
         return True
-    confirmed = a.run.config.screening.selection_mode == "confirmed_reviews"
+    imported = a.run.source_run_id is not None
     forks_per_upstream = {
         name: sum(item.fork.upstream == name for item in a.outcomes) + sum(item.upstream == name for item in a.skips)
         for name in a.observed_upstreams
     }
     return (
-        (confirmed or len(a.repositories) <= limit)
+        (imported or len(a.repositories) <= limit)
         and all(count <= limit for count in forks_per_upstream.values())
         and all(len(item.commits) <= limit for item in a.comparisons)
     )
 
 
 def confirmed_membership_matches(a: Artifacts) -> bool:
-    """A confirmed run contains exactly the approved repositories, all retained."""
+    """A run imported from a source run contains exactly the approved repositories, all retained."""
     approved = a.run.config.screening.approved_repositories()
     retained = {
         item.repository.full_name.lower()
@@ -300,7 +300,7 @@ ALWAYS = [
     sample_bounds_respected,
     fork_inventory_consistent,
 ]
-CONFIRMED_ONLY = [confirmed_membership_matches]
+IMPORTED_ONLY = [confirmed_membership_matches]
 FULL_RUN_ONLY = [enumeration_complete, screening_complete]
 
 
@@ -308,8 +308,8 @@ def verify_run(root: Path) -> dict:
     """Run every applicable check and write the acceptance report."""
     a = load_artifacts(root)
     checks = list(ALWAYS)
-    if a.run.config.screening.selection_mode == "confirmed_reviews":
-        checks += CONFIRMED_ONLY
+    if a.run.source_run_id is not None:
+        checks += IMPORTED_ONLY
     if not a.run.pilot:
         checks += FULL_RUN_ONLY
     results = {check.__name__: bool(check(a)) for check in checks}

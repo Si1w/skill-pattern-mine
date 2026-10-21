@@ -64,12 +64,10 @@ class RepositoryReview(Settings):
 
 
 class ScreeningSettings(Settings):
-    """Formal inclusion requires a calibrated threshold or confirmed reviews."""
+    """Structural thresholds plus the human reviews that define the cohort (ADR 0042)."""
 
     minimum_forks: int = Field(ge=0)
-    selection_mode: Literal["calibrated_ratio", "confirmed_reviews"] = "calibrated_ratio"
     sensitivity_fork_thresholds: list[int]
-    skill_centricity_threshold: float | None = Field(ge=0, le=1)
     reviews: dict[str, RepositoryReview] = Field(default_factory=dict)
 
     @property

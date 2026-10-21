@@ -25,7 +25,6 @@ class AcquisitionChangesTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.config = load_config(Path("configs/skill-pattern-mine.yaml"))
-        self.config.screening.selection_mode = "calibrated_ratio"
         self.config.retrieval.topic_seeds = []
         self.run = prepare_run(self.root, self.config, pilot=True, limit=3, offline=False)
         retrieve_repositories(FixtureClient(), self.config, self.root, limit=3)

@@ -1,4 +1,4 @@
-# Confirmed settings only. Null values require calibration or a run snapshot.
+# Confirmed settings only. A null cutoff is frozen when the run is created.
 dataset: github-public-skill-forks
 seed: 42
 
@@ -30,11 +30,10 @@ observation:
   cutoff_utc: null  # Freeze at acquisition start; never infer from wall time on resume.
 
 screening:
-  selection_mode: confirmed_reviews
   minimum_forks: 1000
   sensitivity_fork_thresholds: [500, 2000]
-  # The ratio is tracked package blobs over all tracked blobs (ADR 0017).
-  skill_centricity_threshold: null  # Unused for the confirmed cohort; never infer a cutoff.
+  # Only approved reviews define the cohort (ADR 0042); the measured package file ratio
+  # (tracked package blobs over all tracked blobs, ADR 0017) is descriptive evidence.
   reviews:
     github/awesome-copilot:
       is_aggregator: false

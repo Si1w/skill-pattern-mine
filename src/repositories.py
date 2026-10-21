@@ -52,54 +52,39 @@ def complete_tree(client, repository: str, tree_sha: str) -> list[TreeEntry]:
 def screen_repository(
     repository: Repository, entries: list[TreeEntry], settings: ScreeningSettings
 ) -> Repository:
-    """Apply confirmed rules, leaving uncalibrated or unreviewed cases pending."""
+    """Apply the structural rules and the human review; unreviewed cases stay pending.
+
+    The package file ratio is measured and recorded but never used as a
+    threshold (ADR 0042).
+    """
     result = repository.model_copy(deep=True)
     result.skill_centricity = measure_skill_centricity(entries, complete=True)
     result.skill_package_paths = result.skill_centricity.package_paths
-    ratio = result.skill_centricity.ratio
     review = settings.review_for(result.full_name)
-    threshold = settings.skill_centricity_threshold
     if result.forks_count < settings.minimum_forks:
         result.excluded_by = ExclusionReason.FORK_THRESHOLD
         result.exclusion_note = f"Fewer than {settings.minimum_forks} forks at retrieval."
     elif not result.skill_package_paths:
         result.excluded_by = ExclusionReason.NOT_SKILL_CENTRIC
         result.exclusion_note = "No regular SKILL.md manifest in the complete tree."
-    elif (
-        settings.selection_mode == "calibrated_ratio"
-        and threshold is not None
-        and (ratio is None or ratio < threshold)
-    ):
-        result.excluded_by = ExclusionReason.NOT_SKILL_CENTRIC
-        result.exclusion_note = "Package file ratio is below the calibrated threshold."
     elif review and review.is_aggregator:
         result.excluded_by = ExclusionReason.AGGREGATOR
         result.exclusion_note = review.reason
     elif review and review.exclude:
         result.excluded_by = ExclusionReason.MANUAL
         result.exclusion_note = review.reason
-    reviewable = settings.selection_mode == "confirmed_reviews" or threshold is not None
-    result.screening_complete = result.excluded_by is not None or (
-        review is not None and reviewable
-    )
+    result.screening_complete = result.excluded_by is not None or review is not None
     return result
 
 
-def eligible_upstreams(
-    repositories: list[RepositorySnapshot], settings: ScreeningSettings, *, pilot: bool
-) -> list[RepositorySnapshot]:
+def eligible_upstreams(repositories: list[RepositorySnapshot], *, pilot: bool) -> list[RepositorySnapshot]:
     """Select retained upstreams; a pilot may also use pending candidates."""
-    approved = settings.approved_repositories()
     return [
         item
         for item in repositories
         if item.tree_complete
         and item.repository.excluded_by is None
         and (item.repository.screening_complete or pilot)
-        and (
-            settings.selection_mode != "confirmed_reviews"
-            or item.repository.full_name.lower() in approved
-        )
     ]
 
 
@@ -245,8 +230,6 @@ def retrieve_repositories(
     client, config: ExperimentSettings, root: Path, *, limit: int | None
 ) -> list[RepositorySnapshot]:
     """Retrieve candidates and screen a deterministic, optionally bounded set."""
-    if config.screening.selection_mode == "confirmed_reviews":
-        raise ValueError("Use the source run to import the confirmed repositories.")
     errors = []
     candidates = discover(client, config, root, limit, errors)
     ordered = fetch_candidate_metadata(client, candidates, errors)
@@ -300,8 +283,6 @@ def import_confirmed_repositories(source: Path, root: Path, config: ExperimentSe
     """Copy the approved upstreams from a candidate run without mutating it."""
     if source.resolve() == root.resolve():
         raise ValueError("Source and destination runs must differ.")
-    if config.screening.selection_mode != "confirmed_reviews":
-        raise ValueError("Import requires confirmed_reviews selection.")
     approved = config.screening.approved_repositories()
     if not approved:
         raise ValueError("No approved repositories in the configuration.")
@@ -315,11 +296,7 @@ def import_confirmed_repositories(source: Path, root: Path, config: ExperimentSe
     selected = [item for item in snapshots if item.repository.full_name.lower() in approved]
     for item in selected:
         check_frozen_evidence(source, item, config)
-    provenance = {
-        "source_run_id": source.name,
-        "selection_mode": "confirmed_reviews",
-        "approved_repositories": sorted(approved),
-    }
+    provenance = {"source_run_id": source.name, "approved_repositories": sorted(approved)}
     manifest = root / "repository_selection.json"
     if manifest.exists():
         check_saved_selection(source, root, manifest, provenance, selected)
@@ -340,7 +317,6 @@ def import_confirmed_repositories(source: Path, root: Path, config: ExperimentSe
     write_json(
         root / "repository_summary.json",
         {
-            "selection_mode": "confirmed_reviews",
             "source_run_id": source.name,
             "processed": len(selected),
             "trees_complete": len(selected),

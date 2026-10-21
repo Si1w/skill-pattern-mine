@@ -88,15 +88,13 @@ def export_repository_review(root: Path) -> dict:
             "Exclude aggregators whose primary purpose is collecting skills from other repositories, "
             "whether linked or stored locally. Under ADR 0022, references, adaptations or "
             "accompanying imported skills do not alone disqualify a substantive skill workflow. "
-            "Calibrated selection requires a file ratio threshold; confirmed_reviews "
-            "uses the explicitly approved cohort and retains ratios as descriptive evidence. "
-            "This worksheet is not an executable experiment configuration."
+            "Only approved reviews define the cohort; the package file ratio is descriptive evidence "
+            "(ADR 0042). This worksheet is not an executable experiment configuration."
         ),
         "summary": json.loads((root / "repository_summary.json").read_text()),
         "search_coverage": json.loads((root / "search_coverage.json").read_text()),
         "minimum_forks": settings["minimum_forks"],
         "sensitivity_fork_thresholds": settings["sensitivity_fork_thresholds"],
-        "skill_centricity_threshold": settings["skill_centricity_threshold"],
         "repositories": candidates,
     }
     with targets[0].open("w", newline="") as stream:

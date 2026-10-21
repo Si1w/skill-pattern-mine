@@ -83,24 +83,12 @@ def run_acquisition(args: argparse.Namespace, root: Path, run: RunRecord) -> int
     """Run the repositories, forks and verify steps that the step argument selects."""
     config = run.config
     client = github_client(root, run, args.offline)
-    collecting_forks = args.step in {"all", "forks"}
-    uncalibrated = (
-        config.screening.selection_mode == "calibrated_ratio"
-        and config.screening.skill_centricity_threshold is None
-    )
-    if collecting_forks and not run.pilot and uncalibrated:
-        raise ValueError(
-            "Formal fork mining requires a calibrated screening threshold. "
-            "Use the repositories step for calibration inputs or --pilot for bounded engineering validation."
-        )
     if args.step in {"all", "repositories"}:
-        if config.screening.selection_mode == "confirmed_reviews":
-            if not run.source_run_id:
-                raise ValueError("Confirmed selection requires --source_run on a new run.")
+        if run.source_run_id:
             import_confirmed_repositories(root.parent / run.source_run_id, root, config)
         else:
             retrieve_repositories(client, config, root, limit=run.num_samples)
-    if collecting_forks:
+    if args.step in {"all", "forks"}:
         retrieve_forks(client, config, root, limit=run.num_samples, pilot=run.pilot)
     passed = True
     if args.step in {"all", "verify"}:

@@ -63,7 +63,7 @@ class TreeTests(unittest.TestCase):
 
 
 class ScreeningTests(unittest.TestCase):
-    """Human review and calibration cannot be replaced with engineering defaults."""
+    """Human review cannot be replaced with engineering defaults."""
 
     def setUp(self):
         self.repo = Repository(
@@ -77,7 +77,6 @@ class ScreeningTests(unittest.TestCase):
         self.config = ScreeningSettings(
             minimum_forks=1000,
             sensitivity_fork_thresholds=[500, 2000],
-            skill_centricity_threshold=None,
         )
         self.entries = [entry("skills/one/SKILL.md"), entry("README.md")]
 
@@ -90,7 +89,7 @@ class ScreeningTests(unittest.TestCase):
             self.config,
         )
 
-    def test_uncalibrated_candidate_remains_pending(self):
+    def test_unreviewed_candidate_remains_pending(self):
         result = self.screen()
         self.assertFalse(result.screening_complete)
         self.assertIsNone(result.excluded_by)
@@ -100,8 +99,7 @@ class ScreeningTests(unittest.TestCase):
         self.repo.aggregator_keyword_hit = True
         self.assertIsNone(self.screen().excluded_by)
 
-    def test_retention_requires_threshold_and_manual_review(self):
-        self.config.skill_centricity_threshold = 0.4
+    def test_retention_requires_manual_review(self):
         self.assertFalse(self.screen().screening_complete)
         self.config.reviews["a/b"] = RepositoryReview(
             is_aggregator=False, reason="Inspected the repository purpose."
@@ -114,9 +112,7 @@ class ScreeningTests(unittest.TestCase):
         self.entries = [entry("README.md")]
         self.assertEqual(self.screen().excluded_by, "not_skill_centric")
 
-    def test_confirmed_review_keeps_ratio_descriptive_and_unreviewed_pending(self):
-        self.config.selection_mode = "confirmed_reviews"
-        self.config.skill_centricity_threshold = 0.9
+    def test_low_ratio_stays_descriptive_and_manual_exclusion_applies(self):
         self.assertFalse(self.screen().screening_complete)
         self.config.reviews["a/b"] = RepositoryReview(
             is_aggregator=False, exclude=False, reason="User approved the repository."
@@ -134,7 +130,6 @@ class ScreeningTests(unittest.TestCase):
         self.assertEqual(self.screen().excluded_by, "fork_threshold")
 
     def test_manual_aggregator_review_excludes_with_reason(self):
-        self.config.skill_centricity_threshold = 0.4
         self.config.reviews["a/b"] = RepositoryReview(
             is_aggregator=True, reason="Contains pointers to external repositories."
         )

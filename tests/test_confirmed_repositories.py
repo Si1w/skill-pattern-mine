@@ -23,14 +23,12 @@ class ConfirmedRepositoryTests(unittest.TestCase):
         self.source = Path(self.temp.name) / "source"
         self.target = Path(self.temp.name) / "target"
         self.config = load_config(Path("configs/skill-pattern-mine.yaml"))
-        self.config.screening.selection_mode = "calibrated_ratio"
         self.config.screening.reviews = {}
         self.config.retrieval.topic_seeds = []
         self.config.retrieval.description_queries = ["skill in:description"]
         self.config.retrieval.manifest_queries = ["filename:plugin.json"]
         prepare_run(self.source, self.config, pilot=True, limit=2, offline=False)
         retrieve_repositories(FixtureClient(), self.config, self.source, limit=2)
-        self.config.screening.selection_mode = "confirmed_reviews"
         self.config.screening.reviews["owner/skills"] = RepositoryReview(
             is_aggregator=False, exclude=False, reason="Approved by the user."
         )

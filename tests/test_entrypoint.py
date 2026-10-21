@@ -26,7 +26,6 @@ class ExtractionCommandTests(unittest.TestCase):
         self.project = Path(self.temp.name)
         self.root = self.project / "data/skill-pattern-mine/runs/fixture"
         self.config = load_config(PROJECT / "configs/skill-pattern-mine.yaml")
-        self.config.screening.selection_mode = "calibrated_ratio"
         self.config.retrieval.topic_seeds = []
 
     def run_command(self, *extra):

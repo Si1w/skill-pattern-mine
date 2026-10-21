@@ -280,11 +280,11 @@ def retrieve_forks(
     if not (root / "repositories.jsonl").exists():
         raise ValueError("Run the repositories step before collecting forks.")
     repositories = [RepositorySnapshot.model_validate(row) for row in read_jsonl(root / "repositories.jsonl")]
-    selected = eligible_upstreams(repositories, config.screening, pilot=pilot)
+    selected = eligible_upstreams(repositories, pilot=pilot)
     if not selected:
         raise ValueError(
-            "No eligible repositories. Formal collection requires calibrated screening "
-            "and human review; use --pilot only for engineering validation."
+            "No eligible repositories. Formal collection requires reviewed repositories; "
+            "use --pilot only for engineering validation."
         )
     stage = ForkStage(root, len(selected))
     for index, upstream in enumerate(selected, start=1):

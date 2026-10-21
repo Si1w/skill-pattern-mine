@@ -36,6 +36,7 @@ Design decisions, their implementation mapping and the remaining design question
 | [0030](0030-reconcile-missing-fork-identities.md) | Reconcile missing fork identities | superseded by 0031 | 2026-09-22 | Repository Mining: missingness and partial progress |
 | [0031](0031-skip-unavailable-forks.md) | Skip unavailable forks | accepted | 2026-09-23 | Repository Mining: missingness and available corpus |
 | [0032](0032-reuse-comparisons-with-minimal-evidence.md) | Reuse comparisons with minimal evidence | accepted | 2026-09-23 | Acquisition efficiency and reproducibility |
+| [0042](0042-select-cohort-by-confirmed-reviews-only.md) | Select the cohort by confirmed reviews only | accepted | 2026-10-21 | Sampling: explicit membership; Repository Mining: selection |
 
 ADRs 0033 to 0041 recorded the rebuttal of the earlier submitted study. That work is complete and its materials were removed from the repository on 2026-10-21; the numbers are not reused.
 
@@ -45,7 +46,7 @@ Each stage is implemented in the order domain models, data flow, behavioral test
 
 | Stage | Input and output | Code location |
 | --- | --- | --- |
-| Retrieve | Intent and manifest queries produce raw responses, candidates and frozen upstream branches; confirmed reviews select the cohort | `src/github.py`, `src/repositories.py`, `src/preprocess.py`, `src/review.py` |
+| Retrieve | Intent and manifest queries produce raw responses, candidates and frozen upstream branches; with `--source_run`, the approved cohort is imported from a candidate run | `src/github.py`, `src/repositories.py`, `src/preprocess.py`, `src/review.py` |
 | Forks | Frozen upstream SHAs produce enumerated forks, frozen fork branches, comparisons, exclusions and skips | `src/forks.py` |
 | Verify | Saved acquisition artifacts produce an acceptance report without network access | `src/verify.py` |
 | Extract | PyDriller histories and complete Git objects produce monthly endpoints, origin evidence, net diffs and omission records | `src/git_history.py`, `src/extract.py` |
@@ -62,7 +63,7 @@ Implementation notes that qualify accepted ADRs: the GitHub API history reader k
 
 ## Remaining design work
 
-- **Corpus and endpoints, ADRs 0002, 0003, 0013 to 0020 and 0027:** the main cohort uses confirmed membership; ratio calibration remains unperformed and must not be claimed. Validate the implemented origin rules on independent human ratings. Package moves remain omitted pending identity review; histories crossing month boundaries backwards fail extraction. Merge attribution is deliberately conservative. Bot and translation handling remain unresolved. An unmatched patch is not proof of independent authorship.
+- **Corpus and endpoints, ADRs 0002, 0003, 0013 to 0020, 0027 and 0042:** the main cohort is defined by confirmed reviews; the package file ratio is descriptive and no calibrated selection is claimed. Validate the implemented origin rules on independent human ratings. Package moves remain omitted pending identity review; histories crossing month boundaries backwards fail extraction. Merge attribution is deliberately conservative. Bot and translation handling remain unresolved. An unmatched patch is not proof of independent authorship.
 - **Taxonomy and annotation, ADRs 0005 and 0006:** fix discovery batch sizes and stopping rules, preserve candidate evidence, isolate independent validation, verify the API model, and define failure handling.
 - **Measurements and audit, ADRs 0007 to 0009:** specify file types and structural units, independent security findings, precise denominators, adjudication, rare category support and undefined statistics.
 - **Analysis, ADRs 0001 and 0016:** account for repeated observations and overlapping labels, define effect summaries and uncertainty, and handle sparse or partial months. Ordinary contingency testing is not yet an approved solution.

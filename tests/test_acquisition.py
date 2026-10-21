@@ -136,7 +136,6 @@ class AcquisitionTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.config = load_config(Path("configs/skill-pattern-mine.yaml"))
-        self.config.screening.selection_mode = "calibrated_ratio"
         self.config.retrieval.topic_seeds = []
         self.config.retrieval.description_queries = ["skill in:description"]
         self.config.retrieval.manifest_queries = ["filename:plugin.json"]
@@ -168,7 +167,7 @@ class AcquisitionTests(unittest.TestCase):
 
     def test_formal_fork_mining_rejects_pending_screening(self):
         retrieve_repositories(FixtureClient(), self.config, self.root, limit=2)
-        with self.assertRaisesRegex(ValueError, "calibrated"):
+        with self.assertRaisesRegex(ValueError, "No eligible"):
             retrieve_forks(
                 FixtureClient(), self.config, self.root, limit=2, pilot=False
             )

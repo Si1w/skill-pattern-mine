@@ -26,7 +26,6 @@ class ReviewTests(unittest.TestCase):
                     "screening": {
                         "minimum_forks": 1000,
                         "sensitivity_fork_thresholds": [500, 2000],
-                        "skill_centricity_threshold": None,
                         "reviews": {},
                     }
                 },
