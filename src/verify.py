@@ -249,15 +249,15 @@ def sample_bounds_respected(a: Artifacts) -> bool:
 
 
 def confirmed_membership_matches(a: Artifacts) -> bool:
-    """A run imported from a source run contains exactly the approved repositories, all retained."""
-    approved = a.run.config.screening.approved_repositories()
+    """A run imported from a source run contains exactly the confirmed repositories, all retained."""
+    confirmed = a.run.config.screening.confirmed_repositories()
     retained = {
         item.repository.full_name.lower()
         for item in a.measured
         if item.repository.screening_complete and item.repository.excluded_by is None
     }
     everything = {item.repository.full_name.lower() for item in a.repositories}
-    return bool(approved) and approved == retained == everything
+    return bool(confirmed) and confirmed == retained == everything
 
 
 def fork_inventory_consistent(a: Artifacts) -> bool:

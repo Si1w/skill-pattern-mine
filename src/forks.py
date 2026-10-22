@@ -283,7 +283,7 @@ def retrieve_forks(
     selected = eligible_upstreams(repositories, pilot=pilot)
     if not selected:
         raise ValueError(
-            "No eligible repositories. Formal collection requires reviewed repositories; "
+            "No eligible repositories. Formal collection requires confirmed repositories; "
             "use --pilot only for engineering validation."
         )
     stage = ForkStage(root, len(selected))

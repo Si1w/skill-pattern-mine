@@ -12,9 +12,10 @@ from src.storage import read_jsonl
 def export_repository_review(root: Path) -> dict:
     """Project frozen measurements into CSV and YAML without inferring decisions.
 
-    The YAML is a review worksheet. Completed review entries can be copied into
-    the experiment configuration; null values must never imply approval.
-    Existing worksheets are protected because they may contain human decisions.
+    The YAML is a review worksheet. The names of repositories to retain are
+    copied into the experiment configuration after review; the worksheet itself
+    never implies a decision. Existing worksheets are protected because they
+    may contain human notes.
     """
     targets = [root / "repository_candidates.csv", root / "repository_review.yaml"]
     if any(path.exists() for path in targets):
@@ -30,8 +31,8 @@ def export_repository_review(root: Path) -> dict:
             raise ValueError(f"Repository collection has not produced {name}.")
     run = json.loads((root / "run.json").read_text())
     settings = run["config"]["screening"]
-    reviews = {name.lower(): review for name, review in settings["reviews"].items()}
-    floor = min([settings["minimum_forks"], *settings["sensitivity_fork_thresholds"]])
+    confirmed = {name.lower() for name in settings["repositories"]}
+    floor = settings["minimum_forks"]
     metadata = {
         row["metadata"]["id"]: row["metadata"]
         for row in read_jsonl(root / "candidate_metadata.jsonl")
@@ -44,15 +45,9 @@ def export_repository_review(root: Path) -> dict:
         name = repository["full_name"]
         details = metadata[snapshot["github_id"]]
         counts = repository["skill_centricity"]
-        scope = (
-            "main"
-            if repository["forks_count"] >= settings["minimum_forks"]
-            else "sensitivity_only"
-        )
         row = {
             "repository": name,
             "url": details["html_url"],
-            "scope": scope,
             "forks": repository["forks_count"],
             "package_count": len(repository["skill_package_paths"]) if counts else None,
             "skill_files": counts["skill_files"] if counts else None,
@@ -74,27 +69,25 @@ def export_repository_review(root: Path) -> dict:
                 "default_branch_sha": snapshot["default_branch_sha"],
                 "package_path_examples": repository["skill_package_paths"][:5],
                 "evidence": snapshot["evidence"],
-                "review": reviews.get(name.lower())
-                or {"is_aggregator": None, "exclude": None, "reason": None},
+                "confirmed": name.lower() in confirmed,
             }
     worksheet = {
         "run_id": root.name,
         "cutoff_utc": run["cutoff_utc"],
         "repository_snapshot_file": "repositories.jsonl",
         "instructions": (
-            "Review repository purpose and package contents. Fill is_aggregator, "
-            "exclude and reason; null means unreviewed. Copy completed review "
-            "objects under screening.reviews in the experiment YAML. "
+            "Review repository purpose and package contents. Add the names of the repositories "
+            "to retain under screening.repositories in the experiment YAML and record each "
+            "exclusion with its reason in an ADR; an unlisted candidate stays pending. "
             "Exclude aggregators whose primary purpose is collecting skills from other repositories, "
             "whether linked or stored locally. Under ADR 0022, references, adaptations or "
             "accompanying imported skills do not alone disqualify a substantive skill workflow. "
-            "Only approved reviews define the cohort; the package file ratio is descriptive evidence "
+            "Only the confirmed list defines the cohort; the package file ratio is descriptive evidence "
             "(ADR 0042). This worksheet is not an executable experiment configuration."
         ),
         "summary": json.loads((root / "repository_summary.json").read_text()),
         "search_coverage": json.loads((root / "search_coverage.json").read_text()),
         "minimum_forks": settings["minimum_forks"],
-        "sensitivity_fork_thresholds": settings["sensitivity_fork_thresholds"],
         "repositories": candidates,
     }
     with targets[0].open("w", newline="") as stream:

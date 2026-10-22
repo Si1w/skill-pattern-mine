@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
 
 
 class Settings(BaseModel):
@@ -42,49 +42,39 @@ class RetrievalSettings(Settings):
 
 
 class ObservationSettings(Settings):
-    """Observation bounds; months are assigned by UTC committer time (ADR 0015)."""
+    """The exclusive upper bound of the observation window (ADRs 0015 and 0045).
 
-    end_exclusive_cap: AwareDatetime
-    cutoff_utc: AwareDatetime | None = Field(
-        description="Fixed cutoff; None freezes the acquisition start time instead."
-    )
+    Months are assigned by UTC committer time. A run freezes the earlier of
+    this cutoff and its own start time, so a run can never observe the future.
+    """
 
-
-class RepositoryReview(Settings):
-    """A recorded human assessment; never inferred from a keyword match."""
-
-    is_aggregator: bool
-    exclude: bool = False
-    reason: str = Field(min_length=1)
-
-    @property
-    def approved(self) -> bool:
-        """A repository enters the confirmed cohort only with an explicit approval."""
-        return not self.exclude and not self.is_aggregator
+    cutoff_utc: AwareDatetime
 
 
 class ScreeningSettings(Settings):
-    """Structural thresholds plus the human reviews that define the cohort (ADR 0042)."""
+    """The fork threshold plus the confirmed repositories that define the cohort (ADR 0042).
+
+    The list holds the human decisions of ADRs 0025 and 0026; it is never inferred
+    from keywords or measured ratios. Candidates outside the list stay pending.
+    """
 
     minimum_forks: int = Field(ge=0)
-    sensitivity_fork_thresholds: list[int]
-    reviews: dict[str, RepositoryReview] = Field(default_factory=dict)
+    maximum_forks_per_star: float = Field(gt=0, description="Forks above stars signal a fork campaign (ADR 0048).")
+    maximum_packages: int = Field(ge=1, description="More packages than this is catalog scale (ADR 0048).")
+    repositories: list[str] = Field(default_factory=list)
 
-    @property
-    def lowest_fork_threshold(self) -> int:
-        """Candidates are kept down to the lowest sensitivity threshold."""
-        return min([self.minimum_forks, *self.sensitivity_fork_thresholds])
+    @field_validator("repositories")
+    @classmethod
+    def unique_names(cls, names: list[str]) -> list[str]:
+        """Reject a repository listed twice, ignoring case."""
+        lowered = [name.lower() for name in names]
+        if len(set(lowered)) != len(lowered):
+            raise ValueError("A confirmed repository is listed more than once.")
+        return names
 
-    def review_for(self, full_name: str) -> RepositoryReview | None:
-        """Look up a review by repository name, ignoring case."""
-        for name, review in self.reviews.items():
-            if name.lower() == full_name.lower():
-                return review
-        return None
-
-    def approved_repositories(self) -> set[str]:
-        """Lower case names of the repositories approved by human review."""
-        return {name.lower() for name, review in self.reviews.items() if review.approved}
+    def confirmed_repositories(self) -> set[str]:
+        """Lower case names of the confirmed repositories."""
+        return {name.lower() for name in self.repositories}
 
 
 class ExtractionSettings(Settings):

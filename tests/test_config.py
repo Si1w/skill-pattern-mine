@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from src.config import ExperimentSettings, RepositoryReview, load_config
+from src.config import ExperimentSettings, ScreeningSettings, load_config
 
 
 class ConfigurationTests(unittest.TestCase):
@@ -21,18 +21,19 @@ class ConfigurationTests(unittest.TestCase):
     def test_round_trip_through_json_is_stable(self):
         self.assertEqual(ExperimentSettings.model_validate_json(self.config.model_dump_json()), self.config)
 
-    def test_approved_repositories_exclude_manual_and_aggregator_reviews(self):
+    def test_confirmed_repositories_are_compared_without_case(self):
         screening = self.config.screening
-        screening.reviews = {
-            "Owner/Kept": RepositoryReview(is_aggregator=False, reason="Approved."),
-            "owner/manual": RepositoryReview(is_aggregator=False, exclude=True, reason="Excluded."),
-            "owner/aggregator": RepositoryReview(is_aggregator=True, reason="Aggregator."),
-        }
-        self.assertEqual(screening.approved_repositories(), {"owner/kept"})
-        self.assertIsNotNone(screening.review_for("OWNER/KEPT"))
-        self.assertIsNone(screening.review_for("owner/other"))
+        screening.repositories = ["Owner/Kept"]
+        self.assertEqual(screening.confirmed_repositories(), {"owner/kept"})
 
-    def test_lowest_fork_threshold_includes_sensitivity_values(self):
-        screening = self.config.screening
-        screening.minimum_forks, screening.sensitivity_fork_thresholds = 1000, [500, 2000]
-        self.assertEqual(screening.lowest_fork_threshold, 500)
+    def test_duplicate_confirmed_repository_is_rejected(self):
+        with self.assertRaises(ValidationError):
+            ScreeningSettings(
+                minimum_forks=1000, maximum_forks_per_star=1.0, maximum_packages=300, repositories=["a/b", "A/B"]
+            )
+
+    def test_shipped_configuration_lists_thirty_four_confirmed_repositories(self):
+        self.assertEqual(len(self.config.screening.confirmed_repositories()), 34)
+        self.assertEqual(self.config.screening.minimum_forks, 2000)
+        self.assertEqual(self.config.screening.maximum_packages, 300)
+

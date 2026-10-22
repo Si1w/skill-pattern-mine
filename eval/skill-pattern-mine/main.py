@@ -34,7 +34,7 @@ def parse_args() -> argparse.Namespace:
         "--step", choices=["all", "repositories", "forks", "verify", "extract", "review"], default="all"
     )
     parser.add_argument("--run_id", help="Reuse an existing ID to resume its saved API snapshot.")
-    parser.add_argument("--source_run", help="Candidate run whose frozen evidence supplies the approved repositories.")
+    parser.add_argument("--source_run", help="Candidate run whose frozen evidence supplies the confirmed repositories.")
     parser.add_argument(
         "--num_samples",
         type=int,

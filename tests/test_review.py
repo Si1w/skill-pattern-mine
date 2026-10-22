@@ -1,4 +1,4 @@
-"""Check that review exports preserve pending decisions and screening scope."""
+"""Check that review exports preserve pending decisions and the fork threshold."""
 
 import csv
 import tempfile
@@ -25,8 +25,7 @@ class ReviewTests(unittest.TestCase):
                 "config": {
                     "screening": {
                         "minimum_forks": 1000,
-                        "sensitivity_fork_thresholds": [500, 2000],
-                        "reviews": {},
+                        "repositories": [],
                     }
                 },
             },
@@ -70,20 +69,18 @@ class ReviewTests(unittest.TestCase):
         write_jsonl(self.root / "repositories.jsonl", snapshots)
         write_jsonl(self.root / "candidate_metadata.jsonl", metadata)
 
-    def test_pending_reviews_and_sensitivity_candidates_remain_visible(self):
+    def test_pending_candidates_remain_visible_and_below_threshold_rows_are_dropped(self):
         export_repository_review(self.root)
         worksheet = yaml.safe_load((self.root / "repository_review.yaml").read_text())
         self.assertFalse(worksheet["summary"]["complete"])
         self.assertEqual(worksheet["search_coverage"][0]["stop_reason"], "search_limit")
         candidates = worksheet["repositories"]
-        self.assertEqual(set(candidates), {"owner/repo0", "owner/repo1"})
-        self.assertEqual(candidates["owner/repo1"]["scope"], "sensitivity_only")
-        self.assertIsNone(candidates["owner/repo0"]["review"]["is_aggregator"])
-        self.assertIsNone(candidates["owner/repo0"]["review"]["exclude"])
+        self.assertEqual(set(candidates), {"owner/repo0"})
+        self.assertFalse(candidates["owner/repo0"]["confirmed"])
         with (self.root / "repository_candidates.csv").open() as stream:
             rows = list(csv.DictReader(stream))
-        self.assertEqual(len(rows), 3)
-        self.assertEqual(rows[2]["package_count"], "0")
+        self.assertEqual([row["repository"] for row in rows], ["owner/repo0", "owner/repo2"])
+        self.assertEqual(rows[1]["package_count"], "0")
 
     def test_reexport_does_not_overwrite_human_decisions(self):
         path = self.root / "repository_review.yaml"

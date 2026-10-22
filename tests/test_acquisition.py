@@ -114,8 +114,8 @@ class FixtureClient:
                 {
                     "id": identity,
                     "full_name": name,
-                    "forks_count": 2000 if identity == 1 else 10,
-                    "stargazers_count": 0,
+                    "forks_count": 5000 if identity == 1 else 10,
+                    "stargazers_count": 20000,
                     "topics": [],
                     "private": False,
                     "fork": identity > 2,
@@ -148,6 +148,8 @@ class AcquisitionTests(unittest.TestCase):
         self.assertEqual(
             set(repositories[0].repository.channels), {"intent", "manifest"}
         )
+        # One intent band (the fixture total is under the search cap) plus one manifest query.
+        self.assertEqual(len(json.loads((self.root / "search_coverage.json").read_text())), 2)
         self.assertFalse(repositories[0].repository.screening_complete)
         self.assertEqual(repositories[1].repository.excluded_by, "fork_threshold")
         comparisons = retrieve_forks(

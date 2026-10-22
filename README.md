@@ -46,6 +46,17 @@ Pipeline stages and their modules:
 uv sync --locked
 ```
 
+### Configuration
+
+`configs/skill-pattern-mine.yaml` holds only the settings a run freezes; the reasoning behind each value lives in the ADRs.
+
+| Section | Setting | Governing decision |
+| --- | --- | --- |
+| `retrieval` | Topic seeds, the `skill` intent query split into complete fork bands, and the two plugin manifest queries | ADRs 0002, 0019, 0044 |
+| `screening` | `minimum_forks` of 2,000, `maximum_forks_per_star`, `maximum_packages`, and `repositories`, the 34 repositories retained by the purpose review in `docs/repository-review-2026-10-21.csv` | ADRs 0022, 0026, 0042, 0043, 0048 |
+| `observation` | `cutoff_utc`, the exclusive upper bound of the window; months follow UTC committer time and the final month is partial | ADRs 0015, 0045 |
+| `extraction` | Git timeout and the largest blob read during monthly extraction | ADRs 0020, 0023 |
+
 ### Usage
 
 All commands run from the project root. Artifacts are written to `data/skill-pattern-mine/runs/{run_id}/`. Reusing a run ID resumes that run with its frozen settings; a changed configuration or sample bound is rejected.
@@ -57,7 +68,7 @@ uv run --locked python eval/skill-pattern-mine/main.py --step repositories --run
 uv run --locked python eval/skill-pattern-mine/main.py --step review --run_id candidates
 ```
 
-Copy completed review objects from `repository_review.yaml` into `screening.reviews` in `configs/skill-pattern-mine.yaml`. The confirmed cohort is then imported from the candidate run and its forks are collected:
+Review the candidates in `repository_review.yaml`, list the repositories to retain under `screening.repositories` in `configs/skill-pattern-mine.yaml`, and record each exclusion and its reason in an ADR. The confirmed cohort is then imported from the candidate run and its forks are collected:
 
 ```bash
 uv run --locked python eval/skill-pattern-mine/main.py --step all --source_run candidates --run_id full

@@ -54,9 +54,7 @@ def prepare_run(
     if pilot and limit is None:
         raise ValueError("An engineering pilot requires --num_samples.")
     now = datetime.now(timezone.utc)
-    cutoff = min(
-        now, config.observation.end_exclusive_cap, config.observation.cutoff_utc or now
-    ).astimezone(timezone.utc)
+    cutoff = min(now, config.observation.cutoff_utc).astimezone(timezone.utc)
     run = RunRecord(
         created_at=now,
         cutoff_utc=cutoff,

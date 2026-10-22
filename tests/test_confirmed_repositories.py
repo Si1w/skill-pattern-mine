@@ -1,11 +1,11 @@
-"""Verify selection from frozen evidence without broadening the approved cohort."""
+"""Verify selection from frozen evidence without broadening the confirmed cohort."""
 
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
-from src.config import RepositoryReview, load_config
+from src.config import load_config
 from src.forks import retrieve_forks
 from src.repositories import import_confirmed_repositories, retrieve_repositories
 from src.run import prepare_run
@@ -23,15 +23,13 @@ class ConfirmedRepositoryTests(unittest.TestCase):
         self.source = Path(self.temp.name) / "source"
         self.target = Path(self.temp.name) / "target"
         self.config = load_config(Path("configs/skill-pattern-mine.yaml"))
-        self.config.screening.reviews = {}
+        self.config.screening.repositories = []
         self.config.retrieval.topic_seeds = []
         self.config.retrieval.description_queries = ["skill in:description"]
         self.config.retrieval.manifest_queries = ["filename:plugin.json"]
         prepare_run(self.source, self.config, pilot=True, limit=2, offline=False)
         retrieve_repositories(FixtureClient(), self.config, self.source, limit=2)
-        self.config.screening.reviews["owner/skills"] = RepositoryReview(
-            is_aggregator=False, exclude=False, reason="Approved by the user."
-        )
+        self.config.screening.repositories = ["owner/skills"]
 
     def prepare(self):
         return prepare_run(
@@ -58,12 +56,10 @@ class ConfirmedRepositoryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Source run"):
             prepare_run(self.target, self.config, pilot=None, limit=None, offline=True, source_run_id="other")
 
-    def test_missing_approved_repository_fails_before_writing_selection(self):
-        self.config.screening.reviews["missing/repo"] = RepositoryReview(
-            is_aggregator=False, reason="Approved."
-        )
+    def test_missing_confirmed_repository_fails_before_writing_selection(self):
+        self.config.screening.repositories.append("missing/repo")
         self.prepare()
-        with self.assertRaisesRegex(ValueError, "Missing approved"):
+        with self.assertRaisesRegex(ValueError, "Missing confirmed"):
             import_confirmed_repositories(self.source, self.target, self.config)
         self.assertFalse((self.target / "repositories.jsonl").exists())
 
@@ -104,9 +100,7 @@ class ConfirmedRepositoryTests(unittest.TestCase):
             (self.source / 'trees' / f'{number}.jsonl').write_bytes(
                 (self.source / 'trees' / f"{original['github_id']}.jsonl").read_bytes()
             )
-            self.config.screening.reviews[name] = RepositoryReview(
-                is_aggregator=False, reason="Approved."
-            )
+            self.config.screening.repositories.append(name)
         write_jsonl(self.source / 'repositories.jsonl', rows)
         self.prepare()
         import_confirmed_repositories(self.source, self.target, self.config)

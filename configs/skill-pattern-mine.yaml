@@ -1,4 +1,3 @@
-# Confirmed settings only. A null cutoff is frozen when the run is created.
 dataset: github-public-skill-forks
 seed: 42
 
@@ -16,203 +15,55 @@ retrieval:
   topic_contains: skill
   maximum_topics: 3
   description_queries:
-    - '"agent skills" in:description'
-    - '"claude skills" in:description'
+    - 'skill in:name,description,topics,readme'
   manifest_queries:
     - 'filename:marketplace.json path:.claude-plugin'
     - 'filename:plugin.json path:.claude-plugin'
-  registry_pointers: []  # Each entry requires repository and source_url.
   fork_sort: oldest
 
-observation:
-  # Months are assigned by GitHub committer time in UTC (ADR 0015); the final partial month is kept (ADR 0016).
-  end_exclusive_cap: "2026-10-01T00:00:00Z"
-  cutoff_utc: null  # Freeze at acquisition start; never infer from wall time on resume.
-
 screening:
-  minimum_forks: 1000
-  sensitivity_fork_thresholds: [500, 2000]
-  # Only approved reviews define the cohort (ADR 0042); the measured package file ratio
-  # (tracked package blobs over all tracked blobs, ADR 0017) is descriptive evidence.
-  reviews:
-    github/awesome-copilot:
-      is_aggregator: false
-      exclude: true
-      reason: "User excluded the mixed collection of agents, instructions, skills and hooks on 2026-09-17."
-    wshobson/agents:
-      is_aggregator: false
-      exclude: true
-      reason: "User excluded the mixed collection of agents, commands and skills on 2026-09-17."
-    teng-lin/notebooklm-py:
-      is_aggregator: false
-      exclude: true
-      reason: "User excluded the SDK and CLI repository with a skill interface on 2026-09-17."
-    ComposioHQ/awesome-claude-skills:
-      is_aggregator: true
-      exclude: true
-      reason: "User excluded the collection of skills from other repositories on 2026-09-16."
+  minimum_forks: 2000
+  maximum_forks_per_star: 1.0
+  maximum_packages: 300
+  repositories:
+    - obra/superpowers
+    - mattpocock/skills
+    - anthropics/skills
+    - addyosmani/agent-skills
+    - DietrichGebert/ponytail
+    - coreyhaines31/marketingskills
+    - Leonxlnx/taste-skill
+    - zhaoxuya520/reverse-skill
+    - anthropics/financial-services
+    - mvanhorn/last30days-skill
+    - hugohe3/ppt-master
+    - K-Dense-AI/scientific-agent-skills
+    - blader/humanizer
+    - alchaincyf/nuwa-skill
+    - Imbad0202/academic-research-skills
+    - cathrynlavery/diagram-design
+    - virgiliojr94/book-to-skill
+    - kepano/obsidian-skills
+    - anthropics/knowledge-work-plugins
+    - browser-use/video-use
+    - ayghri/i-have-adhd
+    - JimLiu/baoyu-skills
+    - alchaincyf/huashu-design
+    - vercel-labs/agent-skills
+    - AgriciDaniel/claude-seo
+    - phuryn/pm-skills
+    - emilkowalski/skills
+    - Yuan1z0825/nature-skills
+    - zarazhangrui/frontend-slides
+    - OthmanAdi/planning-with-files
+    - KKKKhazix/khazix-skills
+    - cloudflare/security-audit-skill
+    - titanwings/distilly
+    - EveryInc/compound-engineering-plugin
 
-    obra/superpowers:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The main deliverable is a set of composable
-        development skills and the workflow built around them.
-    anthropics/skills:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The repository distributes self-contained
-        Agent Skills with instructions, scripts and reference assets.
-    addyosmani/agent-skills:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The repository primarily distributes
-        reusable engineering skills for existing coding agents.
-    DietrichGebert/ponytail:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The main deliverable is a small set of
-        installable skills for coding workflows.
-    calesthio/OpenMontage:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. Existing coding agents orchestrate the
-        video workflows by reading skills and pipeline instructions; Python and rendering tools support those workflows.
-    Leonxlnx/taste-skill:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The main deliverable is installable design
-        and interface skills for existing coding agents.
-    mvanhorn/last30days-skill:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The primary product is an installable
-        research skill; its Python tools support skill execution.
-    K-Dense-AI/scientific-agent-skills:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The primary deliverable is a substantive
-        scientific skill library. The four document skills explicitly vendored from Anthropic do not by themselves make
-        the repository primarily an aggregation catalog.
-    blader/humanizer:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The repository primarily distributes
-        a text rewriting skill with a root manifest.
-    alirezarezvani/claude-skills:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The main deliverable is a reusable skill
-        library, with agents and commands supporting its workflows.
-    kepano/obsidian-skills:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The repository primarily distributes
-        portable Obsidian workflow skills.
-    virgiliojr94/book-to-skill:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The main deliverable is an agent-invoked
-        skill that converts books and documents into reusable skills.
-    JimLiu/baoyu-skills:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The repository primarily distributes
-        installable skills for everyday content and media workflows.
-    phuryn/pm-skills:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. Product management skills are the building
-        blocks of the repository's distributed workflows and plugins.
-    vercel-labs/agent-skills:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The repository primarily distributes
-        installable Agent Skills maintained by Vercel.
-    cathrynlavery/diagram-design:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The main deliverable is an installable
-        diagram design skill with supporting visual assets.
-    OthmanAdi/planning-with-files:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The primary product is a planning skill
-        and associated agent workflow, with hooks and host adaptations.
-    KKKKhazix/khazix-skills:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The repository primarily distributes
-        reusable AI workflow skills.
-    titanwings/distilly:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The project installs as an Agent Skill
-        and produces reusable person profiles packaged as skills.
-    op7418/guizang-ppt-skill:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The main deliverable is an installable
-        presentation skill with rendering assets and helpers.
-    earthtojake/text-to-cad:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The README identifies CAD, CAE and CAM
-        skills as the primary deliverable; large model fixtures and helper code lower the file ratio.
-    google/skills:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The repository primarily distributes
-        Google Cloud skills for existing agents.
-    nidhinjs/prompt-master:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The primary product is an installable
-        prompt optimization skill with a root manifest.
-    ConardLi/garden-skills:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The repository primarily distributes
-        portable skills for specific user tasks.
-    muratcankoylan/Agent-Skills-for-Context-Engineering:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The main deliverable is a collection
-        of context engineering skills with plugin installation support.
-    AgriciDaniel/claude-obsidian:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The primary deliverable is a coordinated
-        knowledge workflow implemented as skills. Its reference to kepano/obsidian-skills does not establish that the
-        repository primarily aggregates external skills or that a fork made a modification.
-    AgriciDaniel/claude-ads:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The main deliverable is a set of advertising
-        audit and operations skills installed into existing agents.
-    kangarooking/cangjie-skill:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The main deliverable is a skill that
-        distills source materials into further skills, with generated packages included.
-    davidpc007/openclaw-marketing-skills:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The repository primarily distributes
-        marketing skill packages, including a catalog entry skill.
-    google-labs-code/stitch-skills:
-      is_aggregator: false
-      exclude: false
-      reason: User confirmed this repository for the main study on 2026-09-22. The repository primarily distributes
-        design workflow skills and skill plugins for Stitch.
-
-    tt-a1i/archify:
-      is_aggregator: false
-      exclude: true
-      reason: User excluded archify on 2026-09-22 after reviewing its Node.js rendering and validation system, standalone
-        CLI, and skill interface; it is outside the selected repository purpose boundary.
+observation:
+  cutoff_utc: "2026-10-21T00:00:00Z"
 
 extraction:
-  # Histories come from PyDriller and GitPython (ADR 0023); lineage follows first parents and
-  # intervals with unresolved upstream origin are excluded from the main analysis (ADR 0018, 0020).
   git_timeout_seconds: 180
   maximum_blob_bytes: 10485760

@@ -27,8 +27,8 @@ class ExclusionReason(StrEnum):
 
     FORK_THRESHOLD = "fork_threshold"
     NOT_SKILL_CENTRIC = "not_skill_centric"
-    AGGREGATOR = "aggregator"
-    MANUAL = "manual"
+    FORKS_EXCEED_STARS = "forks_exceed_stars"
+    CATALOG_SCALE = "catalog_scale"
 
 
 class ChangeStatus(StrEnum):
@@ -143,9 +143,7 @@ class Repository(BaseModel):
         default=None,
         description="First filtering step that removed the repository, or None if retained.",
     )
-    exclusion_note: str | None = Field(
-        default=None, description="Written reason; required when excluded_by is MANUAL."
-    )
+    exclusion_note: str | None = Field(default=None, description="Written reason for the exclusion.")
 
 
 class Fork(BaseModel):

@@ -23,14 +23,22 @@ from src.storage import read_json, read_jsonl, record_error, write_json, write_j
 logger = logging.getLogger(__name__)
 
 AGGREGATOR_KEYWORDS = re.compile(r"\b(awesome|collection|curated)\b")
+SEARCH_CAP = 1000  # GitHub returns at most 1,000 results per search query.
 
 
-def complete_tree(client, repository: str, tree_sha: str) -> list[TreeEntry]:
-    """Expand truncated recursive responses using complete direct subtrees."""
+def complete_tree(client, repository: str, tree_sha: str, *, expand_truncated: bool = True) -> list[TreeEntry] | None:
+    """Read the complete tree; expand a truncated response only when asked (ADR 0046).
+
+    Expansion walks every subtree with one request each, which costs tens of
+    thousands of requests on a very large repository. Returns None when the
+    recursive response is truncated and expansion is not allowed.
+    """
     endpoint = f"repos/{repository}/git/trees/{tree_sha}"
     response = client.get(endpoint + "?recursive=1").body
     if not response["truncated"]:
         return [TreeEntry.model_validate(item) for item in response["tree"]]
+    if not expand_truncated:
+        return None
     entries = []
     pending = [("", tree_sha)]
     subtrees = {}
@@ -52,28 +60,35 @@ def complete_tree(client, repository: str, tree_sha: str) -> list[TreeEntry]:
 def screen_repository(
     repository: Repository, entries: list[TreeEntry], settings: ScreeningSettings
 ) -> Repository:
-    """Apply the structural rules and the human review; unreviewed cases stay pending.
+    """Apply the structural rules; only a confirmed repository is retained.
 
-    The package file ratio is measured and recorded but never used as a
-    threshold (ADR 0042).
+    The rules run in order: fork threshold, manifest presence, forks against
+    stars and package count (ADR 0048). Candidates that pass them but are not
+    confirmed stay pending. The package file ratio is measured and recorded
+    but never used as a threshold (ADR 0042).
     """
     result = repository.model_copy(deep=True)
     result.skill_centricity = measure_skill_centricity(entries, complete=True)
     result.skill_package_paths = result.skill_centricity.package_paths
-    review = settings.review_for(result.full_name)
+    confirmed = result.full_name.lower() in settings.confirmed_repositories()
     if result.forks_count < settings.minimum_forks:
         result.excluded_by = ExclusionReason.FORK_THRESHOLD
         result.exclusion_note = f"Fewer than {settings.minimum_forks} forks at retrieval."
     elif not result.skill_package_paths:
         result.excluded_by = ExclusionReason.NOT_SKILL_CENTRIC
         result.exclusion_note = "No regular SKILL.md manifest in the complete tree."
-    elif review and review.is_aggregator:
-        result.excluded_by = ExclusionReason.AGGREGATOR
-        result.exclusion_note = review.reason
-    elif review and review.exclude:
-        result.excluded_by = ExclusionReason.MANUAL
-        result.exclusion_note = review.reason
-    result.screening_complete = result.excluded_by is not None or review is not None
+    elif result.forks_count > settings.maximum_forks_per_star * result.stars_count:
+        result.excluded_by = ExclusionReason.FORKS_EXCEED_STARS
+        result.exclusion_note = (
+            f"{result.forks_count} forks against {result.stars_count} stars exceeds "
+            f"{settings.maximum_forks_per_star} forks per star."
+        )
+    elif len(result.skill_package_paths) > settings.maximum_packages:
+        result.excluded_by = ExclusionReason.CATALOG_SCALE
+        result.exclusion_note = (
+            f"{len(result.skill_package_paths)} packages exceed the catalog scale limit of {settings.maximum_packages}."
+        )
+    result.screening_complete = result.excluded_by is not None or confirmed
     return result
 
 
@@ -111,18 +126,36 @@ def select_topics(client, config: ExperimentSettings, root: Path, errors: list[d
     return selected
 
 
+def fork_bands(client, query: str, low: int, high: int | None) -> list[str]:
+    """Split the fork range of an intent query until every band fits under the search cap.
+
+    One probe request per band reads the total count; a band is split in the
+    middle, or at twice its lower bound when it is open ended (ADR 0044).
+    """
+    qualifier = f"forks:>={low}" if high is None else f"forks:{low}..{high - 1}"
+    probe = "search/repositories?" + urlencode({"q": f"{query} {qualifier} fork:false", "per_page": 1})
+    total = client.get(probe).body["total_count"]
+    if total <= SEARCH_CAP or (high is not None and high - low <= 1):
+        return [qualifier]
+    middle = low * 2 if high is None else (low + high) // 2
+    return fork_bands(client, query, low, middle) + fork_bands(client, query, middle, high)
+
+
 def discover(
     client, config: ExperimentSettings, root: Path, limit: int | None, errors: list[dict]
 ) -> dict[str, list[RetrievalEvidence]]:
     """Combine intent and manifest queries without losing channel overlap."""
     topics = select_topics(client, config, root, errors)
-    floor = config.screening.lowest_fork_threshold
-    queries = [
-        (RetrievalChannel.INTENT, f"{query} forks:>={floor} fork:false")
-        for query in [*[f"topic:{topic}" for topic in topics], *config.retrieval.description_queries]
-    ]
+    candidates, coverage, queries = {}, [], []
+    for query in [*[f"topic:{topic}" for topic in topics], *config.retrieval.description_queries]:
+        try:
+            bands = fork_bands(client, query, config.screening.minimum_forks, None)
+        except (ApiError, KeyError, ValueError) as error:
+            record_error(errors, "search", query, error)
+            coverage.append({"channel": "intent", "query": query, "complete": False, "stop_reason": "error"})
+            continue
+        queries += [(RetrievalChannel.INTENT, f"{query} {band} fork:false") for band in bands]
     queries += [(RetrievalChannel.MANIFEST, query) for query in config.retrieval.manifest_queries]
-    candidates, coverage = {}, []
     for channel, query in queries:
         route = "repositories" if channel == RetrievalChannel.INTENT else "code"
         endpoint = f"search/{route}?" + urlencode({"q": query, "per_page": config.github.per_page})
@@ -156,12 +189,13 @@ def discover(
 
 
 def fetch_candidate_metadata(
-    client, candidates: dict[str, list[RetrievalEvidence]], errors: list[dict]
+    client, candidates: dict[str, list[RetrievalEvidence]], errors: list[dict], skips: list[dict]
 ) -> list[dict]:
     """Read repository metadata, merging evidence of renamed duplicates by GitHub ID.
 
-    Rows are ordered by fork count, then name, so that bounded runs process a
-    deterministic prefix.
+    A candidate that has disappeared since the search (HTTP 404) is recorded as
+    a skip rather than an error (ADR 0044). Rows are ordered by fork count, then
+    name, so that bounded runs process a deterministic prefix.
     """
     by_id = {}
     for index, (name, evidence) in enumerate(candidates.items(), start=1):
@@ -182,7 +216,13 @@ def fetch_candidate_metadata(
                     "retrieved_at": response.retrieved_at,
                     "evidence": evidence,
                 }
-        except (ApiError, KeyError, ValueError) as error:
+        except ApiError as error:
+            if error.status == 404:
+                skips.append({"full_name": name, "stage": "repository_metadata", "message": str(error)})
+                logger.info("Skipped unavailable candidate %s", name)
+            else:
+                record_error(errors, "repository_metadata", name, error)
+        except (KeyError, ValueError) as error:
             record_error(errors, "repository_metadata", name, error)
     return sorted(
         by_id.values(),
@@ -213,14 +253,22 @@ def candidate_snapshot(row: dict) -> RepositorySnapshot:
 
 
 def freeze_and_screen(client, snapshot: RepositorySnapshot, config: ExperimentSettings, root: Path) -> None:
-    """Freeze the default branch, save the complete tree and screen the repository."""
+    """Freeze the default branch, save the complete tree and screen the repository.
+
+    A truncated tree is expanded only for a confirmed repository; any other
+    candidate stays unmeasured and pending (ADR 0046).
+    """
     name = snapshot.repository.full_name
     logger.info("Freezing and screening %s (%d forks)", name, snapshot.repository.forks_count)
     branch = client.get(f"repos/{name}/branches/{quote(snapshot.default_branch, safe='')}").body
     snapshot.default_branch_sha = branch["commit"]["sha"]
     commit = client.get(f"repos/{name}/git/commits/{snapshot.default_branch_sha}").body
     snapshot.tree_sha = commit["tree"]["sha"]
-    entries = complete_tree(client, name, snapshot.tree_sha)
+    confirmed = name.lower() in config.screening.confirmed_repositories()
+    entries = complete_tree(client, name, snapshot.tree_sha, expand_truncated=confirmed)
+    if entries is None:
+        logger.info("Tree truncated and not expanded outside the cohort: %s", name)
+        return
     write_jsonl(root / "trees" / f"{snapshot.github_id}.jsonl", entries)
     snapshot.tree_complete = True
     snapshot.repository = screen_repository(snapshot.repository, entries, config.screening)
@@ -230,14 +278,15 @@ def retrieve_repositories(
     client, config: ExperimentSettings, root: Path, *, limit: int | None
 ) -> list[RepositorySnapshot]:
     """Retrieve candidates and screen a deterministic, optionally bounded set."""
-    errors = []
+    errors, skips = [], []
     candidates = discover(client, config, root, limit, errors)
-    ordered = fetch_candidate_metadata(client, candidates, errors)
+    ordered = fetch_candidate_metadata(client, candidates, errors, skips)
+    write_jsonl(root / "candidate_skips.jsonl", skips)
     write_jsonl(
         root / "candidate_metadata.jsonl",
         [{**row, "evidence": [item.model_dump(mode="json") for item in row["evidence"]]} for row in ordered],
     )
-    floor = config.screening.lowest_fork_threshold
+    floor = config.screening.minimum_forks
     results = []
     for row in ordered[:limit]:
         snapshot = candidate_snapshot(row)
@@ -245,7 +294,7 @@ def retrieve_repositories(
         try:
             if repository.forks_count < floor:
                 repository.excluded_by = ExclusionReason.FORK_THRESHOLD
-                repository.exclusion_note = f"Fewer than {floor} forks, the lowest configured threshold."
+                repository.exclusion_note = f"Fewer than {floor} forks at retrieval."
                 repository.screening_complete = True
             else:
                 freeze_and_screen(client, snapshot, config, root)
@@ -260,8 +309,12 @@ def retrieve_repositories(
         {
             "discovered": len(candidates),
             "metadata_available": len(ordered),
+            "unavailable": len(skips),
             "processed": len(results),
             "trees_complete": sum(item.tree_complete for item in results),
+            "trees_truncated": sum(
+                item.tree_sha is not None and not item.tree_complete for item in results
+            ),
             "retained": sum(
                 item.repository.screening_complete and item.repository.excluded_by is None
                 for item in results
@@ -280,23 +333,23 @@ def retrieve_repositories(
 
 
 def import_confirmed_repositories(source: Path, root: Path, config: ExperimentSettings) -> None:
-    """Copy the approved upstreams from a candidate run without mutating it."""
+    """Copy the confirmed upstreams from a candidate run without mutating it."""
     if source.resolve() == root.resolve():
         raise ValueError("Source and destination runs must differ.")
-    approved = config.screening.approved_repositories()
-    if not approved:
-        raise ValueError("No approved repositories in the configuration.")
+    confirmed = config.screening.confirmed_repositories()
+    if not confirmed:
+        raise ValueError("No confirmed repositories in the configuration.")
     snapshots = [RepositorySnapshot.model_validate(row) for row in read_jsonl(source / "repositories.jsonl")]
     names = [item.repository.full_name.lower() for item in snapshots]
     ids = [item.github_id for item in snapshots]
     if len(set(names)) != len(names) or len(set(ids)) != len(ids):
         raise ValueError("Duplicate repository identity in source evidence.")
-    if approved - set(names):
-        raise ValueError(f"Missing approved repositories: {sorted(approved - set(names))}")
-    selected = [item for item in snapshots if item.repository.full_name.lower() in approved]
+    if confirmed - set(names):
+        raise ValueError(f"Missing confirmed repositories: {sorted(confirmed - set(names))}")
+    selected = [item for item in snapshots if item.repository.full_name.lower() in confirmed]
     for item in selected:
         check_frozen_evidence(source, item, config)
-    provenance = {"source_run_id": source.name, "approved_repositories": sorted(approved)}
+    provenance = {"source_run_id": source.name, "confirmed_repositories": sorted(confirmed)}
     manifest = root / "repository_selection.json"
     if manifest.exists():
         check_saved_selection(source, root, manifest, provenance, selected)
@@ -344,7 +397,7 @@ def check_frozen_evidence(source: Path, item: RepositorySnapshot, config: Experi
         raise ValueError(f"Incomplete or inconsistent frozen evidence: {item.repository.full_name}")
     item.repository = screen_repository(item.repository, entries, config.screening)
     if item.repository.excluded_by is not None or not item.repository.screening_complete:
-        raise ValueError(f"Approved repository failed structural checks: {item.repository.full_name}")
+        raise ValueError(f"Confirmed repository failed structural checks: {item.repository.full_name}")
 
 
 def check_saved_selection(
