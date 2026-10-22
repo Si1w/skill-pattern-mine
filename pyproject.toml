@@ -10,6 +10,7 @@ dependencies = [
     "pyyaml==6.0.2",
     "pydriller==2.12",
     "gitpython==3.1.62",
+    "matplotlib==3.11.2",
 ]
 
 [dependency-groups]
