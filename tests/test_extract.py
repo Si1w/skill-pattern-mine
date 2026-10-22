@@ -409,6 +409,19 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(report["omissions"]["unestablished_package_identity"], 2)
         self.assertEqual(report["errors"], 0)
 
+    def test_sample_bound_limits_intervals_not_forks(self):
+        other = self.fork.model_copy(update={"full_name": "other/skills"})
+        report = extract_monthly(
+            FakeGitSource(),
+            self.config,
+            self.root,
+            [(self.fork, "up"), (other, "up")],
+            datetime(2026, 4, 1, tzinfo=timezone.utc),
+            month="2026-03",
+            limit=1,
+        )
+        self.assertEqual(report["forks_processed"], 2)
+
     def test_changed_extraction_scope_cannot_reuse_run(self):
         self.extract(FakeGitSource())
         with self.assertRaisesRegex(ValueError, "settings or references"):

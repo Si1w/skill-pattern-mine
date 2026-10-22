@@ -605,12 +605,16 @@ def extract_monthly(
     limit: int | None,
     partial_acquisition: bool = False,
 ) -> dict:
-    """Write monthly records and an acceptance report without analytical claims."""
+    """Write monthly records and an acceptance report without analytical claims.
+
+    Every accepted fork is processed; the sample bound limits only the monthly
+    intervals produced per fork (ADR 0020).
+    """
     if cutoff.tzinfo is None or (limit is not None and limit < 1):
         raise ValueError("Require an aware cutoff and a positive sample bound.")
     check_extraction_manifest(root, config, inputs, cutoff, month, limit, partial_acquisition)
     records, omissions, errors, coverages = [], [], [], []
-    for fork, upstream_sha in inputs[:limit]:
+    for fork, upstream_sha in inputs:
         directory = root / "histories" / hashlib.sha256(fork.full_name.lower().encode()).hexdigest()[:16]
         try:
             rows, skipped, failures = extract_fork(
